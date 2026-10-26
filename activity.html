@@ -1,0 +1,99 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080d19">
+  <meta name="description" content="QueuePulse — searchable, filterable and sortable activity log for simulated queue events.">
+  <title>Activity Logs | QueuePulse</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235eead4'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='18' fill='%2307121c' text-anchor='middle'%3EQ%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-page="activity">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="./index.html">
+        <span class="brand-icon">Q</span>
+        <span>Queue<span class="accent">Pulse</span></span>
+      </a>
+      <div class="nav-label">WORKSPACE</div>
+      <a class="nav-item" href="./index.html"><span>▦</span> Overview</a>
+      <a class="nav-item" href="./metrics.html"><span>⌁</span> Metrics</a>
+      <a class="nav-item active" href="./activity.html"><span>≡</span> Activity logs</a>
+      <a class="nav-item" href="./workers.html"><span>◎</span> Workers & Queues</a>
+      <a class="nav-item" href="./about.html"><span>ⓘ</span> About Project</a>
+      <div class="sidebar-bottom">
+        <div class="status-dot" id="statusDot"></div>
+        <div>
+          <strong>Demo system status</strong>
+          <small id="demoStatus">All systems operational</small>
+        </div>
+      </div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">MONITORING / EVENTS</div>
+          <h1>Activity logs</h1>
+          <p class="muted">Search, filter and sort simulated queue events.</p>
+        </div>
+        <div class="topbar-right">
+          <span class="live-indicator"><span></span> LIVE DEMO</span>
+          <button class="primary-button" id="generateEventsBtn">+ Generate demo events</button>
+        </div>
+      </header>
+      <section class="notice">
+        <div class="notice-icon">≡</div>
+        <div>
+          <strong>Event history is simulated</strong>
+          <p>Events are generated and stored locally in your browser for this demo session.</p>
+        </div>
+        <span class="demo-tag">SIMULATED DATA</span>
+      </section>
+      <section class="panel activity-panel">
+        <div class="filters">
+          <div class="search-box">
+            <label class="visually-hidden" for="searchInput">Search by job ID or event name</label>
+            <input type="search" id="searchInput" placeholder="Search by job ID or event name…" aria-label="Search by job ID or event name">
+          </div>
+          <div class="chip-group" id="statusFilter" role="group" aria-label="Filter by status">
+            <button class="chip active" data-status="all">All</button>
+            <button class="chip" data-status="Completed">Completed</button>
+            <button class="chip" data-status="Pending">Pending</button>
+            <button class="chip" data-status="Failed">Failed</button>
+          </div>
+          <button class="secondary-button" id="clearFiltersBtn">Clear filters</button>
+        </div>
+        <div class="table-scroll">
+          <table id="activityTable">
+            <thead>
+              <tr>
+                <th class="sortable" data-sort="id" aria-sort="none"><button type="button" class="th-btn">JOB ID <span class="sort-arrow">↕</span></button></th>
+                <th class="sortable" data-sort="name" aria-sort="none"><button type="button" class="th-btn">EVENT <span class="sort-arrow">↕</span></button></th>
+                <th class="sortable" data-sort="queue" aria-sort="none"><button type="button" class="th-btn">QUEUE <span class="sort-arrow">↕</span></button></th>
+                <th class="sortable" data-sort="status" aria-sort="none"><button type="button" class="th-btn">STATUS <span class="sort-arrow">↕</span></button></th>
+                <th class="sortable" data-sort="time" aria-sort="descending"><button type="button" class="th-btn">TIME <span class="sort-arrow">▼</span></button></th>
+              </tr>
+            </thead>
+            <tbody id="activityBody"></tbody>
+          </table>
+        </div>
+        <div class="scroll-hint">Swipe the table sideways to see all columns →</div>
+        <div class="empty-state" id="emptyState" hidden>
+          <span class="empty-icon">⌕</span>
+          <strong>No events match your filters</strong>
+          <p>Try a different job ID, event name or status — or clear the filters.</p>
+          <button class="secondary-button" id="emptyClearBtn">Clear filters</button>
+        </div>
+        <div class="table-footer"><span id="resultCount">Showing events</span><span class="footer-live"><span></span> Manual simulation</span></div>
+      </section>
+      <footer class="footer">
+        <span>QueuePulse <span class="muted">· Queue monitoring dashboard</span></span>
+        <span>Prabha Khiani (24BDS0354) · Sam Nagar (24BCE2871) · Educational prototype · Simulated metrics</span>
+      </footer>
+    </main>
+  </div>
+  <script src="./app.js" defer></script>
+</body>
+</html>
