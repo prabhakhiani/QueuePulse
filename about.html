@@ -1,0 +1,156 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080d19">
+  <meta name="description" content="About QueuePulse — an educational queue monitoring dashboard prototype by Prabha Khiani and Sam Nagar.">
+  <title>About Project | QueuePulse</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235eead4'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='18' fill='%2307121c' text-anchor='middle'%3EQ%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-page="about">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="./index.html">
+        <span class="brand-icon">Q</span>
+        <span>Queue<span class="accent">Pulse</span></span>
+      </a>
+      <div class="nav-label">WORKSPACE</div>
+      <a class="nav-item" href="./index.html"><span>▦</span> Overview</a>
+      <a class="nav-item" href="./metrics.html"><span>⌁</span> Metrics</a>
+      <a class="nav-item" href="./activity.html"><span>≡</span> Activity logs</a>
+      <a class="nav-item" href="./workers.html"><span>◎</span> Workers & Queues</a>
+      <a class="nav-item active" href="./about.html"><span>ⓘ</span> About Project</a>
+      <div class="sidebar-bottom">
+        <div class="status-dot" id="statusDot"></div>
+        <div>
+          <strong>Demo system status</strong>
+          <small id="demoStatus">All systems operational</small>
+        </div>
+      </div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">PROJECT / INFORMATION</div>
+          <h1>About QueuePulse</h1>
+          <p class="muted">Project purpose, features, technologies and team.</p>
+        </div>
+        <div class="topbar-right">
+          <span class="live-indicator"><span></span> EDUCATIONAL PROTOTYPE</span>
+        </div>
+      </header>
+      <section class="notice">
+        <div class="notice-icon">ⓘ</div>
+        <div>
+          <strong>QueuePulse is an educational prototype</strong>
+          <p>All metrics, workers, queues and events are simulated locally in your browser. No real backend or production queue is connected.</p>
+        </div>
+        <span class="demo-tag">SIMULATED DATA</span>
+      </section>
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <h2>Project purpose</h2>
+            <p class="muted">What QueuePulse demonstrates.</p>
+          </div>
+        </div>
+        <div class="panel prose-panel">
+          <p>QueuePulse is a <strong>queue monitoring dashboard</strong> — an educational prototype that demonstrates how engineering teams watch over background job systems. It visualizes the key signals of a healthy (or unhealthy) job pipeline: how many jobs are being processed, how many are waiting in each queue, how many fail, and how busy the worker fleet is.</p>
+          <p>The dashboard is built as a multi-page web application with simulated data. A shared demo state is stored in the browser, so the Overview, Metrics, Activity and Workers pages all describe the same fictional system. Every interactive control — refresh, filters, sorting, worker actions — works against that simulated state, making the project a safe sandbox for exploring dashboard concepts.</p>
+        </div>
+      </section>
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <h2>Key features</h2>
+            <p class="muted">What each page of the dashboard does.</p>
+          </div>
+        </div>
+        <div class="about-grid">
+          <article class="about-card">
+            <h3>▦ Overview dashboard</h3>
+            <p>Jobs processed, queue depth, failed jobs and active workers at a glance, with a throughput chart, job-status distribution donut and a recent-activity feed.</p>
+          </article>
+          <article class="about-card">
+            <h3>⌁ Performance analytics</h3>
+            <p>Throughput over time, queue-depth trend, failure-rate statistics and per-worker utilization, with a 1H / 6H / 24H / 7D time-range selector.</p>
+          </article>
+          <article class="about-card">
+            <h3>≡ Activity logs</h3>
+            <p>Searchable by job ID or event name, filterable by status, sortable by every column, with clear status badges, timestamps and an empty state.</p>
+          </article>
+          <article class="about-card">
+            <h3>◎ Workers & queues</h3>
+            <p>Worker status cards with simulated pause, fail and recover actions, plus queue cards showing pending and processing job counts.</p>
+          </article>
+          <article class="about-card">
+            <h3>▤ Responsive design</h3>
+            <p>A single dark-theme design system adapts from laptops to tablets to phones, with accessible contrast and readable tables.</p>
+          </article>
+          <article class="about-card">
+            <h3>⚙ Zero dependencies</h3>
+            <p>Hand-drawn canvas charts, vanilla JavaScript and plain CSS — no frameworks, no build tools, no external libraries.</p>
+          </article>
+        </div>
+      </section>
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <h2>Technologies used</h2>
+            <p class="muted">Plain, standard web technologies.</p>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="tech-pills">
+            <span class="tech-pill">HTML5</span>
+            <span class="tech-pill">CSS3</span>
+            <span class="tech-pill">Vanilla JavaScript (ES6)</span>
+            <span class="tech-pill">Canvas 2D API</span>
+            <span class="tech-pill">Web Storage API</span>
+            <span class="tech-pill">GitHub Pages</span>
+          </div>
+        </div>
+      </section>
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <h2>Team</h2>
+            <p class="muted">The people behind the project.</p>
+          </div>
+        </div>
+        <div class="team-grid">
+          <article class="panel team-card">
+            <div class="team-avatar">PK</div>
+            <div>
+              <strong>Prabha Khiani</strong>
+              <small>Registration No. 24BDS0354</small>
+            </div>
+          </article>
+          <article class="panel team-card">
+            <div class="team-avatar team-avatar-purple">SN</div>
+            <div>
+              <strong>Sam Nagar</strong>
+              <small>Registration No. 24BCE2871</small>
+            </div>
+          </article>
+        </div>
+      </section>
+      <section class="notice disclaimer">
+        <div class="notice-icon">!</div>
+        <div>
+          <strong>Educational prototype disclaimer</strong>
+          <p>QueuePulse is a college project created for learning purposes. It does not connect to, monitor or manage any real cloud platform, production queue or live system. All data shown is simulated in the browser.</p>
+        </div>
+      </section>
+      <footer class="footer">
+        <span>QueuePulse <span class="muted">· Queue monitoring dashboard</span></span>
+        <span>Prabha Khiani (24BDS0354) · Sam Nagar (24BCE2871) · Educational prototype · Simulated metrics</span>
+      </footer>
+    </main>
+  </div>
+  <script src="./app.js" defer></script>
+</body>
+</html>
