@@ -1,0 +1,173 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080d19">
+  <meta name="description" content="QueuePulse — detailed performance analytics with simulated throughput, queue-depth, failure-rate and worker-utilization metrics.">
+  <title>Metrics | QueuePulse</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235eead4'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='18' fill='%2307121c' text-anchor='middle'%3EQ%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-page="metrics">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="./index.html">
+        <span class="brand-icon">Q</span>
+        <span>Queue<span class="accent">Pulse</span></span>
+      </a>
+      <div class="nav-label">WORKSPACE</div>
+      <a class="nav-item" href="./index.html"><span>▦</span> Overview</a>
+      <a class="nav-item active" href="./metrics.html"><span>⌁</span> Metrics</a>
+      <a class="nav-item" href="./activity.html"><span>≡</span> Activity logs</a>
+      <a class="nav-item" href="./workers.html"><span>◎</span> Workers & Queues</a>
+      <a class="nav-item" href="./about.html"><span>ⓘ</span> About Project</a>
+      <div class="sidebar-bottom">
+        <div class="status-dot" id="statusDot"></div>
+        <div>
+          <strong>Demo system status</strong>
+          <small id="demoStatus">All systems operational</small>
+        </div>
+      </div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">MONITORING / ANALYTICS</div>
+          <h1>Performance metrics</h1>
+          <p class="muted">Throughput, queue depth, failures and worker utilization.</p>
+        </div>
+        <div class="topbar-right">
+          <span class="live-indicator"><span></span> LIVE DEMO</span>
+          <div class="range-group" id="rangeGroup" role="group" aria-label="Time range">
+            <button class="range-btn active" data-range="1H">1H</button>
+            <button class="range-btn" data-range="6H">6H</button>
+            <button class="range-btn" data-range="24H">24H</button>
+            <button class="range-btn" data-range="7D">7D</button>
+          </div>
+          <button class="primary-button" id="refreshBtn">↻ Refresh data</button>
+        </div>
+      </header>
+      <section class="notice">
+        <div class="notice-icon">⌁</div>
+        <div>
+          <strong>Analytics are simulated</strong>
+          <p>All charts on this page are generated locally in your browser for demonstration purposes.</p>
+        </div>
+        <span class="demo-tag">SIMULATED DATA</span>
+      </section>
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <h2>Metric summaries</h2>
+            <p class="muted">Aggregated figures for the selected time range.</p>
+          </div>
+          <span class="period-label" id="summaryPeriod">LAST 60 MINUTES</span>
+        </div>
+        <div class="metric-grid">
+          <article class="metric-card">
+            <div class="metric-top">
+              <span>Avg. throughput</span>
+              <span class="metric-icon cyan">↗</span>
+            </div>
+            <div class="metric-value" id="mAvgThroughput">2,050</div>
+            <div class="metric-foot"><span>jobs / hour</span> <span>average for range</span></div>
+            <div class="utilization-track"><span style="width: 78%;"></span></div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-top">
+              <span>Peak queue depth</span>
+              <span class="metric-icon purple">≋</span>
+            </div>
+            <div class="metric-value" id="mPeakDepth">312</div>
+            <div class="metric-foot"><span>jobs</span> <span>highest depth in range</span></div>
+            <div class="utilization-track"><span style="width: 62%; background: var(--purple);"></span></div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-top">
+              <span>Failure rate</span>
+              <span class="metric-icon orange">!</span>
+            </div>
+            <div class="metric-value" id="mFailureRate">0.24%</div>
+            <div class="metric-foot"><span class="warning-text">failed / total jobs</span> <span>average for range</span></div>
+            <div class="utilization-track"><span style="width: 18%; background: var(--orange);"></span></div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-top">
+              <span>Avg. worker utilization</span>
+              <span class="metric-icon green">◎</span>
+            </div>
+            <div class="metric-value" id="mAvgUtil">78%</div>
+            <div class="metric-foot"><span>across active workers</span> <span>simulated fleet</span></div>
+            <div class="utilization-track"><span id="mAvgUtilBar" style="width: 78%;"></span></div>
+          </article>
+        </div>
+      </section>
+      <section class="chart-grid">
+        <article class="panel large-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Throughput over time</h2>
+              <p class="muted">Jobs processed per hour</p>
+            </div>
+            <div class="legend"><span class="legend-dot"></span> Processed jobs</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="metricsThroughput" aria-label="Throughput over time line chart" width="300" height="150"></canvas>
+          </div>
+          <div class="chart-axis" id="throughputAxis"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Failure statistics</h2>
+              <p class="muted">Simulated failure rate trend</p>
+            </div>
+            <div class="legend"><span class="legend-dot orange-dot"></span> Failure rate %</div>
+          </div>
+          <div class="stat-list">
+            <div><span>Total failed jobs</span><strong id="mTotalFailed">23</strong></div>
+            <div><span>Failure rate</span><strong id="mFailRate">0.24%</strong></div>
+            <div><span>Last failure</span><strong id="mLastFailure">—</strong></div>
+          </div>
+          <div class="chart-wrap chart-wrap-short">
+            <canvas id="failureChart" aria-label="Failure rate trend line chart" width="300" height="120"></canvas>
+          </div>
+          <div class="chart-axis" id="failureAxis"></div>
+        </article>
+      </section>
+      <section class="chart-grid-2">
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Queue depth trend</h2>
+              <p class="muted">Pending jobs waiting in queues</p>
+            </div>
+            <div class="legend"><span class="legend-dot purple-dot"></span> Queue depth</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="depthChart" aria-label="Queue depth trend line chart" width="300" height="150"></canvas>
+          </div>
+          <div class="chart-axis" id="depthAxis"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Worker utilization</h2>
+              <p class="muted">Simulated utilization per worker</p>
+            </div>
+          </div>
+          <div class="util-list" id="utilizationList"></div>
+          <p class="muted util-note">Idle and failed workers show 0% utilization.</p>
+        </article>
+      </section>
+      <footer class="footer">
+        <span>QueuePulse <span class="muted">· Queue monitoring dashboard</span></span>
+        <span>Prabha Khiani (24BDS0354) · Sam Nagar (24BCE2871) · Educational prototype · Simulated metrics</span>
+      </footer>
+    </main>
+  </div>
+  <script src="./app.js" defer></script>
+</body>
+</html>
