@@ -1,809 +1,444 @@
 
 (() => {
-  'use strict';
+  "use strict";
 
-  const $ = (id) => document.getElementById(id);
+  const $ = id => document.getElementById(id);
 
   const state = {
-    running: false,
-    timer: null,
-    tick: 0,
-    backlog: 20,
-    latency: 105,
-    workers: 4,
-    maxWorkers: 4,
-    traffic: 50,
-    databaseSlow: false,
-    events: [],
-    cost: 0,
-    incoming: 0,
-    completed: 0,
+    step: 0,
+    backlog: 0,
+    incoming: 10,
+    completed: 10,
     failed: 0,
-    cpu: 0,
-    history: [],
-    roundRobinIndex: 0
+    workers: 4,
+    totalWorkers: 4,
+    traffic: 50,
+    strategy: "round-robin",
+    dbSlow: false,
+    running: false,
+    cost: 0.02,
+    totalIncoming: 10,
+    totalCompleted: 10,
+    history: [{step:0,incoming:10,completed:10,backlog:0}],
+    events: [],
+    timer: null,
+    spike: false
   };
 
-  const strategyDescriptions = {
-    'round-robin':
-      'Distributes requests across available workers in rotation.',
-    'least-loaded':
-      'Assigns work to the worker with the lowest current load.',
-    'fifo':
-      'Processes queued requests in first-in, first-out order.'
+  const strategyNames = {
+    "round-robin": "Round Robin",
+    "least-loaded": "Least Loaded",
+    "fifo": "First In, First Out (FIFO)"
   };
 
-  const MAX_HISTORY = 20;
-  const WORKER_CAPACITY = 8;
-  const COST_PER_WORKER_STEP = 0.006;
+  const strategyHelp = {
+    "round-robin": "Distributes requests across workers in rotation.",
+    "least-loaded": "Prioritizes the worker with the lowest simulated load.",
+    "fifo": "Processes waiting requests in first-in, first-out order."
+  };
 
-  function nowTime() {
+  function timeNow() {
     return new Date().toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
+      hour: "2-digit", minute: "2-digit", second: "2-digit"
     });
-  }
-
-  function notify(message) {
-    const toast = $('toast');
-    if (!toast) return;
-
-    toast.textContent = message;
-    toast.classList.add('show');
-
-    clearTimeout(notify.timeout);
-    notify.timeout = setTimeout(() => {
-      toast.classList.remove('show');
-    }, 2600);
   }
 
   function escapeHtml(value) {
-    return String(value).replace(/[&<>"']/g, character => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;'
-    })[character]);
+    return String(value).replace(/[&<>"']/g, char => ({
+      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+    })[char]);
   }
 
-  function addEvent(event, outcome, risk = 'Low', decision = 'Continue') {
+  function showToast(message) {
+    const el = $("toast");
+    el.textContent = message;
+    el.classList.add("show");
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => el.classList.remove("show"), 2500);
+  }
+
+  function addEvent(name, outcome, risk="low", decision="Continue") {
     state.events.unshift({
-      time: nowTime(),
-      event,
-      outcome,
-      risk,
-      decision,
-      tick: state.tick,
-      backlog: state.backlog,
-      latency: state.latency,
-      workers: state.workers,
-      incoming: state.incoming,
-      completed: state.completed,
-      cpu: state.cpu
+      time: timeNow(), name, outcome, risk, decision
     });
-
-    if (state.events.length > 200) {
-      state.events.length = 200;
-    }
-
+    state.events = state.events.slice(0, 100);
     renderEvents();
   }
 
   function renderEvents() {
-    const list = $('event-list');
-    const body = $('event-table-body');
+    const list = $("event-list");
+    const table = $("event-table-body");
 
-    if (list) {
-      list.innerHTML = state.events.length
-        ? state.events.slice(0, 6).map(event => {
-            const marker = event.risk === 'High'
-              ? 'danger'
-              : event.risk === 'Medium' ? 'warn' : '';
-
-            return `
-              <div class="event-item">
-                <span class="event-marker ${marker}"></span>
-                <div>
-                  <strong>${escapeHtml(event.event)}</strong>
-                  <small>${escapeHtml(event.outcome)}</small>
-                </div>
-                <span class="event-time">${escapeHtml(event.time)}</span>
-              </div>`;
-          }).join('')
-        : `<div class="empty-state">
-             <span>⌁</span>
-             <strong>No events yet</strong>
-             <p>Start a simulation to see activity here.</p>
-           </div>`;
+    list.innerHTML = "";
+    if (!state.events.length) {
+      list.innerHTML = '<div class="empty-state"><strong>No events yet</strong><p>Run a simulation to see activity.</p></div>';
     }
 
-    if (body) {
-      body.innerHTML = state.events.length
-        ? state.events.slice(0, 100).map(event => `
-            <tr>
-              <td>${escapeHtml(event.time)}</td>
-              <td>${escapeHtml(event.event)}</td>
-              <td>${escapeHtml(event.outcome)}</td>
-              <td><span class="risk risk-${event.risk.toLowerCase()}">
-                ${escapeHtml(event.risk)}
-              </span></td>
-              <td>${escapeHtml(event.decision)}</td>
-            </tr>`).join('')
-        : `<tr><td colspan="5" class="table-empty">
-             No events recorded yet.
-           </td></tr>`;
-    }
-  }
-
-  // Add extra numerical cards without replacing the existing HTML.
-  function createExtraMetricCards() {
-    const grid = document.querySelector('.metrics-grid');
-    if (!grid) return;
-
-    const metrics = [
-      {
-        id: 'metric-incoming',
-        label: 'INCOMING REQUESTS',
-        icon: '↗',
-        color: 'teal',
-        value: '0',
-        foot: 'Requests arriving this step'
-      },
-      {
-        id: 'metric-completed',
-        label: 'COMPLETED REQUESTS',
-        icon: '✓',
-        color: 'blue',
-        value: '0',
-        foot: 'Requests processed this step'
-      },
-      {
-        id: 'metric-cpu',
-        label: 'CPU UTILIZATION',
-        icon: '▥',
-        color: 'purple',
-        value: '0%',
-        foot: 'Estimated worker utilization'
-      }
-    ];
-
-    metrics.forEach(metric => {
-      if ($(metric.id)) return;
-
-      const card = document.createElement('article');
-      card.className = 'metric-card';
-      card.innerHTML = `
-        <div class="metric-top">
-          <span>${metric.label}</span>
-          <span class="metric-icon ${metric.color}">${metric.icon}</span>
-        </div>
-        <div class="metric-value" id="${metric.id}">${metric.value}</div>
-        <div class="metric-foot">${metric.foot}</div>`;
-
-      grid.appendChild(card);
+    state.events.slice(0, 5).forEach(event => {
+      const row = document.createElement("div");
+      row.className = "event-item";
+      row.innerHTML = `
+        <span class="event-indicator ${event.risk}"></span>
+        <div><strong>${escapeHtml(event.name)}</strong>
+        <p>${escapeHtml(event.outcome)}</p></div>
+        <time>${escapeHtml(event.time)}</time>`;
+      list.appendChild(row);
     });
 
-    // Allow the extra cards to fit the existing dashboard layout.
-    grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(190px, 1fr))';
-  }
-
-  function renderMetrics() {
-    const setText = (id, value) => {
-      if ($(id)) $(id).textContent = value;
-    };
-
-    setText('metric-backlog', state.backlog);
-
-    if ($('metric-latency')) {
-      $('metric-latency').innerHTML =
-        `${state.latency} <small>ms</small>`;
+    table.innerHTML = "";
+    if (!state.events.length) {
+      table.innerHTML = '<tr><td colspan="5" class="table-empty">No events recorded yet.</td></tr>';
     }
 
-    if ($('metric-workers')) {
-      $('metric-workers').innerHTML =
-        `${state.workers} <small>/ ${state.maxWorkers}</small>`;
-    }
-
-    setText('metric-cost', `₹${state.cost.toFixed(2)}`);
-    setText('metric-incoming', state.incoming);
-    setText('metric-completed', state.completed);
-    setText('metric-cpu', `${state.cpu}%`);
-    setText('traffic-value', `${state.traffic}%`);
-
-    if ($('chart-summary')) {
-      $('chart-summary').textContent =
-        `Step ${state.tick} · Queue ${state.backlog} · CPU ${state.cpu}%`;
-    }
-
-    drawChart();
+    state.events.forEach(event => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${escapeHtml(event.time)}</td>
+        <td>${escapeHtml(event.name)}</td>
+        <td>${escapeHtml(event.outcome)}</td>
+        <td><span class="risk risk-${event.risk}">${escapeHtml(event.risk)}</span></td>
+        <td>${escapeHtml(event.decision)}</td>`;
+      table.appendChild(row);
+    });
   }
 
   function recordHistory() {
     state.history.push({
-      tick: state.tick,
+      step: state.step,
       incoming: state.incoming,
       completed: state.completed,
       backlog: state.backlog
     });
-
-    if (state.history.length > MAX_HISTORY) {
-      state.history.shift();
-    }
+    if (state.history.length > 30) state.history.shift();
   }
 
-  // Draw three data series on the same canvas.
-  function drawChart() {
-    const canvas = $('workload-chart');
-    if (!canvas) return;
+  function runStep() {
+    state.step++;
 
+    const base = Math.round(state.traffic * 0.22);
+    const jitter = Math.floor(Math.random() * 4);
+    state.incoming = Math.max(0, base + jitter + (state.spike ? 12 : 0));
+
+    const capacityPerWorker = state.dbSlow ? 4 : 8;
+    const strategyBonus = state.strategy === "least-loaded" ? 1 : 0;
+    const capacity = Math.max(0, state.workers * capacityPerWorker + strategyBonus);
+    const available = state.backlog + state.incoming;
+
+    state.completed = Math.min(available, capacity);
+    state.backlog = Math.max(0, available - state.completed);
+
+    if (state.workers === 0) state.failed += state.incoming;
+
+    state.totalIncoming += state.incoming;
+    state.totalCompleted += state.completed;
+    state.cost += state.workers * 0.0008 + (state.dbSlow ? 0.001 : 0);
+
+    state.spike = false;
+    recordHistory();
+
+    const risk = state.backlog > 20 ? "high" : state.backlog > 8 ? "medium" : "low";
+    const decision = risk === "high" ? "Monitor capacity" : "Continue";
+    addEvent("Workload step",
+      `${state.incoming} incoming, ${state.completed} completed, ${state.backlog} queued`,
+      risk, decision);
+
+    render();
+  }
+
+  function renderMetrics() {
+    const capacity = Math.max(1, state.workers * (state.dbSlow ? 4 : 8));
+    const cpu = Math.min(100, Math.round(state.completed / capacity * 100));
+    const latency = Math.round(20 + state.backlog * 2.7 +
+      (state.dbSlow ? 85 : 0) + (state.workers < 4 ? 25 : 0));
+
+    $("metric-incoming").textContent = state.incoming;
+    $("metric-completed").textContent = state.completed;
+    $("metric-backlog").textContent = state.backlog;
+    $("metric-cpu").textContent = `${cpu}%`;
+    $("metric-latency").innerHTML = `${latency} <small>ms</small>`;
+    $("metric-workers").innerHTML = `${state.workers} <small>/ ${state.totalWorkers}</small>`;
+    $("metric-cost").textContent = `₹${state.cost.toFixed(2)}`;
+
+    $("traffic-value").textContent = `${state.traffic}%`;
+    $("traffic-level").value = state.traffic;
+    $("strategy-select").value = state.strategy;
+    $("strategy-info").textContent = strategyHelp[state.strategy];
+
+    $("overview-total").textContent = state.totalIncoming;
+    $("overview-completed").textContent = state.totalCompleted;
+    $("overview-failed").textContent = state.failed;
+    $("overview-strategy").textContent = strategyNames[state.strategy];
+    $("history-steps").textContent = state.step;
+
+    $("pipeline-ingress").textContent = `${state.incoming} requests / step`;
+    $("pipeline-strategy").textContent = `${strategyNames[state.strategy]} strategy`;
+    $("worker-pool-count").textContent = `${state.workers} / ${state.totalWorkers} online`;
+    $("chart-summary").textContent = `Step ${state.step} · Queue ${state.backlog}`;
+    $("backlog-summary").textContent = state.backlog > 20
+      ? "Queue pressure high" : state.backlog > 8 ? "Queue growing" : "Queue stable";
+
+    for (let i = 1; i <= state.totalWorkers; i++) {
+      const worker = $(`worker-node-${i}`);
+      worker.classList.toggle("offline", i > state.workers);
+      worker.title = i > state.workers ? "Worker offline (simulated)" : "Worker online (simulated)";
+    }
+
+    const database = $("database-status");
+    database.classList.toggle("slowed", state.dbSlow);
+    $("database-label").textContent = state.dbSlow
+      ? "Slow response · simulated" : "Simulated dependency";
+
+    $("system-status").textContent =
+      state.workers === 0 ? "CAPACITY CRITICAL" :
+      state.dbSlow ? "DEGRADED MODE" :
+      state.backlog > 20 ? "HIGH QUEUE LOAD" : "SYSTEM READY";
+  }
+
+  function drawChart(canvasId, series, showLabels=true) {
+    const canvas = $(canvasId);
     const rect = canvas.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
+    if (rect.width < 10 || rect.height < 10) return;
 
-    const width = Math.max(280, Math.floor(rect.width));
-    const height = Math.max(160, Math.floor(rect.height));
     const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(rect.width * dpr);
+    canvas.height = Math.floor(rect.height * dpr);
 
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const width = rect.width, height = rect.height;
+    const pad = {left:36, right:12, top:14, bottom:showLabels ? 28 : 14};
+    const plotWidth = width - pad.left - pad.right;
+    const plotHeight = height - pad.top - pad.bottom;
     ctx.clearRect(0, 0, width, height);
 
-    const pad = { left: 38, right: 12, top: 18, bottom: 28 };
-    const chartW = width - pad.left - pad.right;
-    const chartH = height - pad.top - pad.bottom;
+    const allValues = series.flatMap(item => item.values);
+    const maxValue = Math.max(10, Math.ceil(Math.max(...allValues, 1) / 5) * 5);
+    const count = Math.max(1, series[0].values.length);
 
-    const history = state.history.length
-      ? state.history
-      : [{
-          tick: 0,
-          incoming: 0,
-          completed: 0,
-          backlog: state.backlog
-        }];
+    ctx.font = '9px "DM Mono", monospace';
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
 
-    const allValues = history.flatMap(item => [
-      item.incoming,
-      item.completed,
-      item.backlog
-    ]);
-
-    const maxVal = Math.max(10, ...allValues) * 1.15;
-
-    ctx.font = '10px monospace';
-    ctx.lineWidth = 1;
-
-    // Horizontal grid and Y-axis labels.
     for (let i = 0; i <= 4; i++) {
-      const y = pad.top + chartH * i / 4;
-
-      ctx.strokeStyle = '#263449';
+      const value = maxValue - maxValue * i / 4;
+      const y = pad.top + plotHeight * i / 4;
+      ctx.strokeStyle = "#223149";
+      ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(pad.left, y);
       ctx.lineTo(width - pad.right, y);
       ctx.stroke();
-
-      ctx.fillStyle = '#74859b';
-      ctx.fillText(
-        String(Math.round(maxVal * (4 - i) / 4)),
-        2,
-        y + 3
-      );
+      ctx.fillStyle = "#7187a4";
+      ctx.fillText(String(Math.round(value)), pad.left - 8, y);
     }
 
-    function drawSeries(key, color) {
-      if (!history.length) return;
+    if (showLabels) {
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      const ticks = Math.min(6, count);
+      for (let i = 0; i < ticks; i++) {
+        const index = ticks === 1 ? 0 : Math.round(i * (count - 1) / (ticks - 1));
+        const x = pad.left + (count === 1 ? plotWidth / 2 : index / (count - 1) * plotWidth);
+        ctx.fillStyle = "#7187a4";
+        ctx.fillText(`S${series[0].steps[index] ?? index}`, x, height - 17);
+      }
+    }
 
-      const points = history.map((item, index) => ({
-        x: pad.left + (
-          history.length <= 1
-            ? chartW
-            : index * chartW / (history.length - 1)
-        ),
-        y: pad.top + chartH -
-          (item[key] / maxVal) * chartH
-      }));
+    series.forEach(item => {
+      if (!item.values.length) return;
 
+      ctx.strokeStyle = item.color;
+      ctx.lineWidth = 2;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
       ctx.beginPath();
-      points.forEach((point, index) => {
-        if (index === 0) ctx.moveTo(point.x, point.y);
-        else ctx.lineTo(point.x, point.y);
+
+      item.values.forEach((value, index) => {
+        const x = pad.left + (count === 1 ? plotWidth / 2 : index / (count - 1) * plotWidth);
+        const y = pad.top + plotHeight - value / maxValue * plotHeight;
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       });
 
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
       ctx.stroke();
 
-      points.forEach(point => {
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, 2.5, 0, Math.PI * 2);
-        ctx.fillStyle = color;
-        ctx.fill();
-      });
-    }
-
-    drawSeries('incoming', '#60a5fa');
-    drawSeries('completed', '#a78bfa');
-    drawSeries('backlog', '#5eead4');
-
-    ctx.fillStyle = '#74859b';
-    ctx.fillText('Simulation steps →', pad.left, height - 7);
-
-    // Keep the legend synchronized with the graph.
-    const legend = canvas.closest('.chart-panel')
-      ?.querySelector('.chart-legend');
-
-    if (legend) {
-      legend.innerHTML = `
-        <span><i class="legend-dot" style="background:#60a5fa"></i>
-          Incoming</span>
-        <span><i class="legend-dot" style="background:#a78bfa"></i>
-          Completed</span>
-        <span><i class="legend-dot" style="background:#5eead4"></i>
-          Backlog</span>
-        <span id="chart-summary">Step ${state.tick} · Queue ${state.backlog}</span>`;
-    }
+      const last = item.values.length - 1;
+      const x = pad.left + (count === 1 ? plotWidth / 2 : last / (count - 1) * plotWidth);
+      const y = pad.top + plotHeight - item.values[last] / maxValue * plotHeight;
+      ctx.fillStyle = item.color;
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    });
   }
 
-  function updateButton() {
-    const button = $('start-pause');
-    if (button) {
-      button.textContent = state.running
-        ? 'Ⅱ Pause simulation'
-        : '▶ Start simulation';
-    }
+  function renderCharts() {
+    const history = state.history;
+
+    drawChart("workload-chart", [
+      {color:"#60a5fa", values:history.map(x => x.incoming), steps:history.map(x => x.step)},
+      {color:"#5eead4", values:history.map(x => x.completed), steps:history.map(x => x.step)},
+      {color:"#a78bfa", values:history.map(x => x.backlog), steps:history.map(x => x.step)}
+    ]);
+
+    drawChart("history-chart", [
+      {color:"#a78bfa", values:history.map(x => x.backlog), steps:history.map(x => x.step)}
+    ]);
   }
 
-  function getRisk() {
-    if (state.backlog > 35 || state.latency > 300 || state.cpu > 95) {
-      return 'High';
-    }
-
-    if (state.backlog > 15 || state.latency > 160 || state.cpu > 75) {
-      return 'Medium';
-    }
-
-    return 'Low';
-  }
-
-  function simulationStep() {
-    state.tick += 1;
-
-    // Traffic percentage determines the average incoming workload.
-    const incoming = Math.max(
-      0,
-      Math.round(state.traffic * 0.18 + (Math.random() * 4 - 2))
-    );
-
-    const capacity = state.workers * WORKER_CAPACITY;
-
-    // The database slowdown reduces processing capacity.
-    const effectiveCapacity = state.databaseSlow
-      ? Math.floor(capacity * 0.45)
-      : capacity;
-
-    // Scheduling policies affect which queued work is served first.
-    const strategy = $('strategy-select')?.value || 'round-robin';
-
-    let processingCapacity = effectiveCapacity;
-
-    if (strategy === 'least-loaded' && state.workers > 0) {
-      processingCapacity = Math.min(
-        capacity,
-        effectiveCapacity + 1
-      );
-    } else if (strategy === 'fifo') {
-      processingCapacity = Math.max(
-        0,
-        effectiveCapacity - (state.backlog > 20 ? 1 : 0)
-      );
-    }
-
-    state.incoming = incoming;
-    const availableWork = state.backlog + incoming;
-    state.completed = Math.min(availableWork, processingCapacity);
-
-    // Any work that cannot be processed remains in the queue.
-    state.backlog = Math.max(
-      0,
-      availableWork - state.completed
-    );
-
-    // CPU is an illustrative utilization estimate.
-    state.cpu = state.workers === 0
-      ? 0
-      : Math.min(
-          100,
-          Math.round(
-            (state.completed / Math.max(1, capacity)) * 100 +
-            (state.databaseSlow ? 12 : 0)
-          )
-        );
-
-    state.latency = Math.max(
-      12,
-      Math.round(
-        25 +
-        state.backlog * 5 +
-        (state.maxWorkers - state.workers) * 35 +
-        (state.databaseSlow ? 110 : 0)
-      )
-    );
-
-    state.cost += state.workers * COST_PER_WORKER_STEP;
-
-    recordHistory();
-
-    const risk = getRisk();
-
-    addEvent(
-      'Workload step',
-      `${incoming} arrived, ${state.completed} completed, ${state.backlog} waiting`,
-      risk,
-      strategyDescriptions[strategy]
-    );
-
+  function render() {
     renderMetrics();
-  }
-
-  function startSimulation() {
-    if (state.running) {
-      stopSimulation();
-      notify('Simulation paused.');
-      return;
-    }
-
-    state.running = true;
-    updateButton();
-
-    addEvent(
-      'Simulation started',
-      'Automatic workload processing started',
-      'Low',
-      'Run'
-    );
-
-    notify('Simulation started.');
-    simulationStep();
-
-    state.timer = setInterval(simulationStep, 1600);
+    renderCharts();
+    renderEvents();
   }
 
   function stopSimulation() {
     state.running = false;
     clearInterval(state.timer);
     state.timer = null;
-    updateButton();
+    $("start-pause").textContent = "▶ Start simulation";
+  }
+
+  function toggleSimulation() {
+    if (state.running) {
+      stopSimulation();
+      showToast("Simulation paused.");
+    } else {
+      state.running = true;
+      $("start-pause").textContent = "Ⅱ Pause simulation";
+      state.timer = setInterval(runStep, 1300);
+      showToast("Simulation running.");
+    }
   }
 
   function resetSimulation() {
     stopSimulation();
 
-    state.tick = 0;
-    state.backlog = 0;
-    state.latency = 25;
-    state.workers = 4;
-    state.maxWorkers = 4;
-    state.traffic = Number($('traffic-level')?.value ?? 50);
-    state.databaseSlow = false;
-    state.events = [];
-    state.cost = 0;
-    state.incoming = 0;
-    state.completed = 0;
-    state.failed = 0;
-    state.cpu = 0;
-    state.history = [];
-    state.roundRobinIndex = 0;
+    Object.assign(state, {
+      step:0, backlog:0, incoming:10, completed:10, failed:0,
+      workers:4, traffic:50, strategy:"round-robin", dbSlow:false,
+      spike:false, cost:0.02, totalIncoming:10, totalCompleted:10,
+      history:[{step:0,incoming:10,completed:10,backlog:0}],
+      events:[]
+    });
+
+    addEvent("Simulation reset",
+      "Queue cleared, workers restored and database normal", "low", "Baseline restored");
+    render();
+    showToast("Simulation reset to baseline.");
+  }
+
+  function injectFault(type) {
+    if (type === "spike") {
+      state.spike = true;
+      state.backlog += 8;
+      addEvent("Traffic spike", "Incoming load increased; queue pressure may rise",
+        "medium", "Monitor queue");
+    } else if (type === "worker") {
+      if (state.workers > 0) state.workers--;
+      state.backlog += 3;
+      addEvent("Worker failure", `${state.workers} of ${state.totalWorkers} workers available`,
+        "high", "Capacity reduced");
+    } else if (type === "database") {
+      state.dbSlow = true;
+      addEvent("Database slowdown", "Effective processing capacity reduced",
+        "high", "Inspect dependency");
+    }
 
     recordHistory();
-    addEvent(
-      'Simulation reset',
-      'Queue cleared; workers restored; database normal',
-      'Low',
-      'Reset'
-    );
-
-    renderMetrics();
-    notify('Simulation reset.');
+    render();
+    showToast("Scenario applied to simulated system.");
   }
 
-  function setView(viewName) {
-    const views = ['dashboard', 'simulation', 'architecture'];
-
-    if (!views.includes(viewName)) return;
-
-    views.forEach(name => {
-      const section = $(`${name}-view`);
-      if (section) section.hidden = name !== viewName;
-    });
-
-    document.querySelectorAll('[data-view]').forEach(button => {
-      button.classList.toggle(
-        'active',
-        button.dataset.view === viewName
-      );
-    });
-
-    const titles = {
-      dashboard: 'Dashboard',
-      simulation: 'Simulation Lab',
-      architecture: 'Architecture'
-    };
-
-    if ($('page-title')) {
-      $('page-title').textContent = titles[viewName];
-    }
-
-    requestAnimationFrame(drawChart);
+  function recoverSystem() {
+    state.workers = state.totalWorkers;
+    state.dbSlow = false;
+    state.spike = false;
+    addEvent("System recovery", "Workers restored and database returned to normal",
+      "low", "Resume workload");
+    render();
+    showToast("Simulated system recovered.");
   }
 
-  function exportCSV() {
-    if (!state.events.length) {
-      notify('No events to export yet. Run the simulation first.');
-      return;
-    }
-
-    const headers = [
-      'Time',
-      'Step',
-      'Event',
-      'Outcome',
-      'Risk',
-      'Decision',
-      'Incoming',
-      'Completed',
-      'Backlog',
-      'Latency_ms',
-      'CPU_percent',
-      'Active_workers'
+  function exportCsv() {
+    const rows = [
+      ["Time","Event","Outcome","Risk","Decision"],
+      ...state.events.slice().reverse().map(e =>
+        [e.time,e.name,e.outcome,e.risk,e.decision])
     ];
 
-    const rows = state.events.map(event => [
-      event.time,
-      event.tick,
-      event.event,
-      event.outcome,
-      event.risk,
-      event.decision,
-      event.incoming,
-      event.completed,
-      event.backlog,
-      event.latency,
-      event.cpu,
-      event.workers
-    ]);
+    const csv = rows.map(row =>
+      row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(",")
+    ).join("\r\n");
 
-    const csv = [headers, ...rows]
-      .map(row => row.map(value =>
-        `"${String(value).replace(/"/g, '""')}"`
-      ).join(','))
-      .join('\r\n');
-
-    const blob = new Blob(
-      [csv],
-      { type: 'text/csv;charset=utf-8;' }
-    );
-
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-
+    const link = document.createElement("a");
     link.href = url;
-    link.download = 'queuepulse-events.csv';
+    link.download = "queuepulse_events.csv";
     document.body.appendChild(link);
     link.click();
     link.remove();
-
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    notify('Detailed CSV exported.');
+    URL.revokeObjectURL(url);
+    showToast("Event log exported as CSV.");
   }
 
-  function bindEvents() {
-    document.querySelectorAll('[data-view]').forEach(button => {
-      button.addEventListener('click', () => {
-        setView(button.dataset.view);
-      });
+  function showView(view) {
+    const titles = {
+      dashboard:["Dashboard","Simulated workload telemetry and system health."],
+      simulation:["Simulation Lab","Configure traffic and introduce controlled faults."],
+      architecture:["Architecture","Logical components of the QueuePulse simulation."]
+    };
+
+    document.querySelectorAll(".view-section").forEach(section => {
+      section.hidden = section.id !== `${view}-view`;
     });
 
-    $('hero-simulate')?.addEventListener('click', () => {
-      setView('simulation');
+    document.querySelectorAll("[data-view]").forEach(button => {
+      button.classList.toggle("active", button.dataset.view === view);
     });
 
-    $('traffic-level')?.addEventListener('input', event => {
-      state.traffic = Number(event.target.value);
-      if ($('traffic-value')) {
-        $('traffic-value').textContent = `${state.traffic}%`;
-      }
-    });
+    $("page-title").textContent = titles[view][0];
+    $("page-subtitle").textContent = titles[view][1];
 
-    $('strategy-select')?.addEventListener('change', event => {
-      const strategy = event.target.value;
-
-      if ($('strategy-info')) {
-        $('strategy-info').textContent =
-          strategyDescriptions[strategy];
-      }
-
-      addEvent(
-        'Strategy changed',
-        `Scheduling strategy set to ${event.target.selectedOptions[0].textContent}`,
-        'Low',
-        'Configuration'
-      );
-
-      notify('Scheduling strategy updated.');
-    });
-
-    $('start-pause')?.addEventListener('click', startSimulation);
-
-    $('step-simulation')?.addEventListener('click', () => {
-      if (state.running) {
-        notify('Pause before stepping manually.');
-        return;
-      }
-
-      simulationStep();
-      notify('One simulation step completed.');
-    });
-
-    $('reset-simulation')?.addEventListener('click', resetSimulation);
-
-    $('traffic-spike')?.addEventListener('click', () => {
-      state.traffic = Math.min(100, state.traffic + 35);
-
-      if ($('traffic-level')) {
-        $('traffic-level').value = state.traffic;
-      }
-
-      if ($('traffic-value')) {
-        $('traffic-value').textContent = `${state.traffic}%`;
-      }
-
-      // Record the spike immediately so the graph visibly changes.
-      state.tick += 1;
-      const addedRequests = 12;
-
-      state.incoming = addedRequests;
-      state.completed = 0;
-      state.backlog += addedRequests;
-
-      state.latency = Math.max(
-        state.latency,
-        25 + state.backlog * 5
-      );
-
-      state.cpu = Math.min(
-        100,
-        Math.round(state.cpu + 15)
-      );
-
-      recordHistory();
-
-      addEvent(
-        'Traffic spike',
-        `${addedRequests} extra requests arrived; queue is now ${state.backlog}`,
-        getRisk(),
-        'Monitor queue'
-      );
-
-      renderMetrics();
-      notify('Traffic spike simulated.');
-    });
-
-    $('worker-crash')?.addEventListener('click', () => {
-      if (state.workers === 0) {
-        notify('All workers are offline. Recover the system first.');
-        return;
-      }
-
-      state.workers -= 1;
-      state.backlog += 3;
-      state.latency += 35;
-
-      state.cpu = state.workers === 0
-        ? 0
-        : Math.min(100, Math.round(
-            state.completed /
-            Math.max(1, state.workers * WORKER_CAPACITY) * 100
-          ));
-
-      state.tick += 1;
-      recordHistory();
-
-      addEvent(
-        'Worker failure',
-        `One worker failed; ${state.workers} of ${state.maxWorkers} remain available`,
-        getRisk(),
-        'Rebalance workload'
-      );
-
-      renderMetrics();
-      notify('Worker failure simulated.');
-    });
-
-    $('db-slowdown')?.addEventListener('click', () => {
-      if (state.databaseSlow) {
-        notify('Database slowdown is already active.');
-        return;
-      }
-
-      state.databaseSlow = true;
-      state.latency += 90;
-      state.backlog += 5;
-      state.tick += 1;
-
-      recordHistory();
-
-      addEvent(
-        'Database slowdown',
-        `Processing capacity reduced; latency is ${state.latency} ms`,
-        getRisk(),
-        'Check database'
-      );
-
-      renderMetrics();
-      notify('Database slowdown simulated.');
-    });
-
-    $('recover-faults')?.addEventListener('click', () => {
-      state.workers = state.maxWorkers;
-      state.databaseSlow = false;
-
-      state.latency = Math.max(
-        25,
-        Math.round(25 + state.backlog * 5)
-      );
-
-      state.tick += 1;
-      recordHistory();
-
-      addEvent(
-        'System recovery',
-        'All workers restored and database slowdown cleared',
-        getRisk(),
-        'Recovered'
-      );
-
-      renderMetrics();
-      notify('System recovered. Continue stepping to drain the queue.');
-    });
-
-    $('dashboard-export')?.addEventListener('click', exportCSV);
-    $('simulation-export')?.addEventListener('click', exportCSV);
-
-    window.addEventListener('resize', () => {
-      requestAnimationFrame(drawChart);
-    });
+    if (view === "dashboard") requestAnimationFrame(renderCharts);
   }
 
-  function init() {
-    createExtraMetricCards();
-    bindEvents();
+  document.querySelectorAll("[data-view]").forEach(button => {
+    button.addEventListener("click", event => {
+      event.preventDefault();
+      showView(button.dataset.view);
+    });
+  });
 
-    if ($('strategy-info') && $('strategy-select')) {
-      $('strategy-info').textContent =
-        strategyDescriptions[$('strategy-select').value];
-    }
-
-    // Seed a visible starting point for the graph.
-    recordHistory();
+  $("traffic-level").addEventListener("input", event => {
+    state.traffic = Number(event.target.value);
     renderMetrics();
+  });
 
-    addEvent(
-      'System ready',
-      'QueuePulse educational simulation initialized',
-      'Low',
-      'Await input'
-    );
+  $("strategy-select").addEventListener("change", event => {
+    state.strategy = event.target.value;
+    addEvent("Scheduling strategy changed",
+      `Strategy set to ${strategyNames[state.strategy]}`, "low", "Apply next step");
+    render();
+  });
 
-    setView('dashboard');
-  }
+  $("start-pause").addEventListener("click", toggleSimulation);
+  $("step-simulation").addEventListener("click", runStep);
+  $("reset-simulation").addEventListener("click", resetSimulation);
+  $("traffic-spike").addEventListener("click", () => injectFault("spike"));
+  $("worker-crash").addEventListener("click", () => injectFault("worker"));
+  $("db-slowdown").addEventListener("click", () => injectFault("database"));
+  $("recover-faults").addEventListener("click", recoverSystem);
+  $("dashboard-export").addEventListener("click", exportCsv);
+  $("simulation-export").addEventListener("click", exportCsv);
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  window.addEventListener("resize", () => requestAnimationFrame(renderCharts));
+
+  addEvent("System initialized",
+    "Baseline workload ready: 4 workers, normal database, 50% traffic",
+    "low", "Await input");
+
+  render();
 })();
