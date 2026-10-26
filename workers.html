@@ -1,0 +1,82 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080d19">
+  <meta name="description" content="QueuePulse — simulated worker fleet and queue management with pause, fail and recover actions.">
+  <title>Workers & Queues | QueuePulse</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235eead4'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='18' fill='%2307121c' text-anchor='middle'%3EQ%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-page="workers">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="./index.html">
+        <span class="brand-icon">Q</span>
+        <span>Queue<span class="accent">Pulse</span></span>
+      </a>
+      <div class="nav-label">WORKSPACE</div>
+      <a class="nav-item" href="./index.html"><span>▦</span> Overview</a>
+      <a class="nav-item" href="./metrics.html"><span>⌁</span> Metrics</a>
+      <a class="nav-item" href="./activity.html"><span>≡</span> Activity logs</a>
+      <a class="nav-item active" href="./workers.html"><span>◎</span> Workers & Queues</a>
+      <a class="nav-item" href="./about.html"><span>ⓘ</span> About Project</a>
+      <div class="sidebar-bottom">
+        <div class="status-dot" id="statusDot"></div>
+        <div>
+          <strong>Demo system status</strong>
+          <small id="demoStatus">All systems operational</small>
+        </div>
+      </div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">MONITORING / INFRASTRUCTURE</div>
+          <h1>Workers & Queues</h1>
+          <p class="muted">Manage the simulated worker fleet and inspect queue backlogs.</p>
+        </div>
+        <div class="topbar-right">
+          <span class="live-indicator"><span></span> LIVE DEMO</span>
+          <button class="primary-button" id="refreshBtn">↻ Refresh data</button>
+        </div>
+      </header>
+      <section class="notice">
+        <div class="notice-icon">◎</div>
+        <div>
+          <strong>Worker actions are simulated</strong>
+          <p>Pausing, failing and recovering workers only changes local demo state — nothing is sent anywhere.</p>
+        </div>
+        <span class="demo-tag">SIMULATED DATA</span>
+      </section>
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <h2>Worker fleet</h2>
+            <p class="muted">Status cards for all simulated workers.</p>
+          </div>
+          <span class="period-label" id="workerSummary">10 workers</span>
+        </div>
+        <div class="worker-grid" id="workerGrid"></div>
+      </section>
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <h2>Queues</h2>
+            <p class="muted">Pending and in-flight jobs per queue.</p>
+          </div>
+          <span class="period-label">3 QUEUES</span>
+        </div>
+        <div class="queue-grid" id="queueGrid"></div>
+      </section>
+      <footer class="footer">
+        <span>QueuePulse <span class="muted">· Queue monitoring dashboard</span></span>
+        <span>Prabha Khiani (24BDS0354) · Sam Nagar (24BCE2871) · Educational prototype · Simulated metrics</span>
+      </footer>
+    </main>
+  </div>
+  <script src="./app.js" defer></script>
+</body>
+</html>
