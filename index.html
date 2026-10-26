@@ -5,32 +5,33 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#080d19">
+  <meta name="description" content="QueuePulse — educational queue monitoring dashboard prototype with simulated metrics.">
   <title>QueuePulse | Queue Monitoring</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235eead4'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='18' fill='%2307121c' text-anchor='middle'%3EQ%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="./styles.css">
 </head>
-<body>
+<body data-page="overview">
   <div class="app-shell">
     <aside class="sidebar">
-      <a class="brand" href="#">
+      <a class="brand" href="./index.html">
         <span class="brand-icon">Q</span>
         <span>Queue<span class="accent">Pulse</span></span>
       </a>
-
       <div class="nav-label">WORKSPACE</div>
-      <a class="nav-item active" href="#overview"><span>▦</span> Overview</a>
-      <a class="nav-item" href="#metrics"><span>⌁</span> Metrics</a>
-      <a class="nav-item" href="#activity"><span>≡</span> Activity logs</a>
-
+      <a class="nav-item active" href="./index.html"><span>▦</span> Overview</a>
+      <a class="nav-item" href="./metrics.html"><span>⌁</span> Metrics</a>
+      <a class="nav-item" href="./activity.html"><span>≡</span> Activity logs</a>
+      <a class="nav-item" href="./workers.html"><span>◎</span> Workers & Queues</a>
+      <a class="nav-item" href="./about.html"><span>ⓘ</span> About Project</a>
       <div class="sidebar-bottom">
-        <div class="status-dot"></div>
+        <div class="status-dot" id="statusDot"></div>
         <div>
-          <strong>System status</strong>
-          <small>All systems operational</small>
+          <strong>Demo system status</strong>
+          <small id="demoStatus">All systems operational</small>
         </div>
       </div>
     </aside>
-
-    <main class="main-content" id="overview">
+    <main class="main-content">
       <header class="topbar">
         <div>
           <div class="eyebrow">MONITORING / DASHBOARD</div>
@@ -42,16 +43,14 @@
           <button class="primary-button" id="refreshBtn">↻ Refresh data</button>
         </div>
       </header>
-
       <section class="notice">
         <div class="notice-icon">⌁</div>
         <div>
           <strong>QueuePulse monitoring is active</strong>
-          <p>Demo metrics update locally to demonstrate queue behaviour.</p>
+          <p>Demo metrics update locally to demonstrate queue behaviour. No real backend is connected.</p>
         </div>
         <span class="demo-tag">SIMULATED DATA</span>
       </section>
-
       <section class="section" id="metrics">
         <div class="section-heading">
           <div>
@@ -60,7 +59,6 @@
           </div>
           <span class="period-label">LAST 60 MINUTES</span>
         </div>
-
         <div class="metric-grid">
           <article class="metric-card">
             <div class="metric-top">
@@ -76,7 +74,6 @@
               <i style="height:100%"></i>
             </div>
           </article>
-
           <article class="metric-card">
             <div class="metric-top">
               <span>Queue depth</span>
@@ -91,14 +88,13 @@
               <i style="height:42%"></i>
             </div>
           </article>
-
           <article class="metric-card">
             <div class="metric-top">
               <span>Failed jobs</span>
               <span class="metric-icon orange">!</span>
             </div>
             <div class="metric-value" id="failed">23</div>
-            <div class="metric-foot"><span class="warning-text">0.18%</span> <span>failure rate</span></div>
+            <div class="metric-foot"><span class="warning-text" id="ovFailPct">0.18%</span> <span>failure rate</span></div>
             <div class="mini-bars orange-bars" aria-hidden="true">
               <i style="height:30%"></i><i style="height:48%"></i><i style="height:25%"></i>
               <i style="height:65%"></i><i style="height:42%"></i><i style="height:35%"></i>
@@ -106,19 +102,17 @@
               <i style="height:32%"></i>
             </div>
           </article>
-
           <article class="metric-card">
             <div class="metric-top">
               <span>Active workers</span>
               <span class="metric-icon green">◎</span>
             </div>
             <div class="metric-value" id="workers">8<span class="value-unit"> / 10</span></div>
-            <div class="metric-foot"><span class="positive">80%</span> <span>worker utilization</span></div>
-            <div class="utilization-track"><span id="workerBar"></span></div>
+            <div class="metric-foot"><span class="positive" id="ovWorkerPct">80%</span> <span>worker utilization</span></div>
+            <div class="utilization-track"><span id="workerBar" style="width: 80%;"></span></div>
           </article>
         </div>
       </section>
-
       <section class="chart-grid">
         <article class="panel large-panel">
           <div class="panel-heading">
@@ -129,24 +123,23 @@
             <div class="legend"><span class="legend-dot"></span> Processed jobs</div>
           </div>
           <div class="chart-summary">
-            <strong id="throughput">2,148</strong>
+            <strong id="throughput">2,140</strong>
             <span>jobs / hour</span>
           </div>
           <div class="chart-wrap">
-            <canvas id="throughputChart" aria-label="Queue throughput line chart"></canvas>
+            <canvas id="throughputChart" aria-label="Queue throughput line chart" width="300" height="150"></canvas>
           </div>
-          <div class="chart-axis"><span>10:00</span><span>11:00</span><span>12:00</span><span>13:00</span><span>14:00</span><span>15:00</span><span>Now</span></div>
+          <div class="chart-axis"><span>-60m</span><span>-50m</span><span>-40m</span><span>-30m</span><span>-20m</span><span>-10m</span><span>Now</span></div>
         </article>
-
         <article class="panel">
           <div class="panel-heading">
             <div>
               <h2>Job distribution</h2>
-              <p class="muted">Current job status</p>
+              <p class="muted">Recent logged jobs</p>
             </div>
           </div>
           <div class="donut-area">
-            <div class="donut" id="jobDonut">
+            <div class="donut" id="jobDonut" style="background: conic-gradient(rgb(94, 234, 212) 0deg, rgb(94, 234, 212) 72%, rgb(167, 139, 250) 72%, rgb(167, 139, 250) 92%, rgb(251, 146, 60) 92%, rgb(251, 146, 60) 100%);">
               <div class="donut-center"><strong id="totalJobs">100</strong><span>Total jobs</span></div>
             </div>
           </div>
@@ -157,7 +150,6 @@
           </div>
         </article>
       </section>
-
       <section class="panel activity-panel" id="activity">
         <div class="panel-heading">
           <div>
@@ -171,21 +163,14 @@
             <thead>
               <tr><th>JOB ID</th><th>EVENT</th><th>QUEUE</th><th>STATUS</th><th>TIME</th></tr>
             </thead>
-            <tbody id="activityBody">
-              <tr><td class="job-id">JOB-1048</td><td>Image processing</td><td>media-worker</td><td><span class="status success">Completed</span></td><td>Just now</td></tr>
-              <tr><td class="job-id">JOB-1047</td><td>Email delivery</td><td>notifications</td><td><span class="status pending">Pending</span></td><td>1 min ago</td></tr>
-              <tr><td class="job-id">JOB-1046</td><td>Report generation</td><td>background</td><td><span class="status success">Completed</span></td><td>2 min ago</td></tr>
-              <tr><td class="job-id">JOB-1045</td><td>Data synchronization</td><td>background</td><td><span class="status failed">Failed</span></td><td>3 min ago</td></tr>
-              <tr><td class="job-id">JOB-1044</td><td>Thumbnail creation</td><td>media-worker</td><td><span class="status success">Completed</span></td><td>4 min ago</td></tr>
-            </tbody>
+            <tbody id="activityBody"></tbody>
           </table>
         </div>
-        <div class="table-footer"><span>Showing latest events</span><span class="footer-live"><span></span> Demo stream active</span></div>
+        <div class="table-footer"><span>Showing latest events</span><span class="footer-live"><span></span> Manual simulation</span></div>
       </section>
-
       <footer class="footer">
         <span>QueuePulse <span class="muted">· Queue monitoring dashboard</span></span>
-        <span>Educational prototype · Simulated metrics</span>
+        <span>Prabha Khiani (24BDS0354) · Sam Nagar (24BCE2871) · Educational prototype · Simulated metrics</span>
       </footer>
     </main>
   </div>
