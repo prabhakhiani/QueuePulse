@@ -1,92 +1,256 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#080d19" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080d19">
   <title>QueuePulse | Cloud Workload Simulator</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar">
-      <a class="brand" href="#dashboard" aria-label="QueuePulse dashboard">
-        <span class="brand-mark">Q</span>
-        <span><strong>QueuePulse</strong><small>WORKLOAD STUDIO</small></span>
-      </a>
-      <div class="side-label">WORKSPACE</div>
-      <nav class="nav-list" aria-label="Main navigation">
-        <button class="nav-item active" type="button" data-view="dashboard"><span class="nav-icon">▦</span> Dashboard</button>
-        <button class="nav-item" type="button" data-view="simulation"><span class="nav-icon">◉</span> Simulation Lab</button>
-        <button class="nav-item" type="button" data-view="architecture"><span class="nav-icon">⌘</span> Architecture</button>
-      </nav>
-      <div class="sidebar-bottom">
-        <div class="online-dot"></div><span>Local simulation active</span>
-        <div class="team-card"><span class="side-label">PROJECT TEAM</span><p>Prabha Khiani <small>24BDS0354</small></p><p>Sam Nagar <small>24BCE2871</small></p></div>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand" href="#" data-view="dashboard">
+      <span class="brand-mark">Q</span>
+      <span><strong>QueuePulse</strong><small>WORKLOAD STUDIO</small></span>
+    </a>
+
+    <div class="side-label">WORKSPACE</div>
+    <nav class="nav-list">
+      <button class="nav-item active" data-view="dashboard">▦ &nbsp; Dashboard</button>
+      <button class="nav-item" data-view="simulation">◉ &nbsp; Simulation Lab</button>
+      <button class="nav-item" data-view="architecture">⌘ &nbsp; Architecture</button>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <span class="online-dot"></span> Local simulation active
+      <div class="team-card">
+        <div class="side-label">PROJECT TEAM</div>
+        <p>Prabha Khiani<small>24BDS0354</small></p>
+        <p>Sam Nagar<small>24BCE2871</small></p>
       </div>
-    </aside>
+    </div>
+  </aside>
 
-    <main class="main-area">
-      <header class="topbar">
-        <div><div class="eyebrow">CLOUD COMPUTING PROJECT</div><h1 id="page-title">Dashboard</h1><p class="topbar-subtitle">A clear view of your simulated workload.</p></div>
-        <div class="topbar-right"><span class="status-pill"><span class="status-dot"></span> SYSTEM READY</span><span class="avatar">QP</span></div>
-      </header>
+  <main class="main-area">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">CLOUD COMPUTING PROJECT</div>
+        <h1 id="page-title">Dashboard</h1>
+        <p id="page-subtitle">Simulated workload telemetry and system health.</p>
+      </div>
+      <div class="topbar-right">
+        <span class="status-pill"><i class="status-dot"></i><span id="system-status">SYSTEM READY</span></span>
+        <span class="avatar">QP</span>
+      </div>
+    </header>
 
-      <section id="dashboard-view" class="view-section">
-        <div class="hero-card">
-          <div class="hero-copy"><div class="eyebrow">INTELLIGENT WORKLOAD MANAGEMENT</div><h2>Keep your workloads<br /><span>moving forward.</span></h2><p>Explore queue behaviour, worker capacity and scheduling strategies in a safe, interactive simulation.</p><button id="hero-simulate" type="button" class="btn btn-primary">Open Simulation Lab <span>↗</span></button></div>
-          <div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="hero-core">QP<span>●</span></div><div class="art-node node-one">↗</div><div class="art-node node-two">⌁</div><div class="art-node node-three">▦</div></div>
-          <div class="hero-index">01 <span>/ 03</span></div>
+    <!-- DASHBOARD -->
+    <section id="dashboard-view" class="view-section">
+      <div class="dashboard-intro">
+        <div>
+          <div class="eyebrow">CLOUD WORKLOAD TELEMETRY / 01</div>
+          <h2>System overview</h2>
+          <p>Observe request throughput, queue pressure, worker capacity and simulated infrastructure cost.</p>
         </div>
+        <button class="btn btn-primary" data-view="simulation">Open Simulation Lab ↗</button>
+      </div>
 
-        <div class="metrics-grid">
-          <article class="metric-card"><div class="metric-top"><span>QUEUE BACKLOG</span><span class="metric-icon teal">↘</span></div><div class="metric-value" id="metric-backlog">0</div><div class="metric-foot"><span class="metric-dot teal-bg"></span>Requests waiting</div></article>
-          <article class="metric-card"><div class="metric-top"><span>AVG. LATENCY</span><span class="metric-icon purple">◷</span></div><div class="metric-value" id="metric-latency">0 <small>ms</small></div><div class="metric-foot">Estimated processing delay</div></article>
-          <article class="metric-card"><div class="metric-top"><span>ACTIVE WORKERS</span><span class="metric-icon blue">▥</span></div><div class="metric-value" id="metric-workers">4 <small>/ 4</small></div><div class="metric-foot">Available processing units</div></article>
-          <article class="metric-card"><div class="metric-top"><span>ESTIMATED COST</span><span class="metric-icon amber">₹</span></div><div class="metric-value" id="metric-cost">₹0.00</div><div class="metric-foot">Illustrative cost estimate</div></article>
+      <div class="metrics-grid">
+        <article class="metric-card">
+          <div class="metric-top"><span>INCOMING REQUESTS</span><b class="metric-icon teal">↗</b></div>
+          <div class="metric-value" id="metric-incoming">10</div>
+          <div class="metric-foot">Requests this step</div>
+        </article>
+        <article class="metric-card">
+          <div class="metric-top"><span>COMPLETED REQUESTS</span><b class="metric-icon blue">✓</b></div>
+          <div class="metric-value" id="metric-completed">10</div>
+          <div class="metric-foot">Processed this step</div>
+        </article>
+        <article class="metric-card">
+          <div class="metric-top"><span>QUEUE BACKLOG</span><b class="metric-icon purple">▤</b></div>
+          <div class="metric-value" id="metric-backlog">0</div>
+          <div class="metric-foot">Requests waiting</div>
+        </article>
+        <article class="metric-card">
+          <div class="metric-top"><span>CPU UTILIZATION</span><b class="metric-icon amber">▦</b></div>
+          <div class="metric-value" id="metric-cpu">31%</div>
+          <div class="metric-foot">Estimated worker load</div>
+        </article>
+        <article class="metric-card">
+          <div class="metric-top"><span>AVG. LATENCY</span><b class="metric-icon purple">◷</b></div>
+          <div class="metric-value" id="metric-latency">25 <small>ms</small></div>
+          <div class="metric-foot">Estimated processing delay</div>
+        </article>
+        <article class="metric-card">
+          <div class="metric-top"><span>ACTIVE WORKERS</span><b class="metric-icon blue">▥</b></div>
+          <div class="metric-value" id="metric-workers">4 <small>/ 4</small></div>
+          <div class="metric-foot">Available processing units</div>
+        </article>
+      </div>
+
+      <div class="technical-grid">
+        <article class="panel">
+          <div class="panel-heading">
+            <div><h3>Workload traffic &amp; processing</h3><p>Request throughput and queue depth by simulation step</p></div>
+            <span class="tag"><i class="status-dot"></i> LIVE MODEL</span>
+          </div>
+          <div class="chart-wrap main-chart"><canvas id="workload-chart"></canvas></div>
+          <div class="chart-legend">
+            <span><i class="legend-dot incoming-dot"></i>Incoming</span>
+            <span><i class="legend-dot completed-dot"></i>Completed</span>
+            <span><i class="legend-dot backlog-dot"></i>Backlog</span>
+            <span id="chart-summary">Step 0 · Queue 0</span>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <div><h3>Processing pipeline</h3><p>Logical request path</p></div>
+            <span class="tag">LOCAL MODEL</span>
+          </div>
+          <div class="pipeline">
+            <div class="pipeline-node">
+              <span class="pipeline-icon">⇢</span>
+              <div><strong>Request ingress</strong><small id="pipeline-ingress">10 requests / step</small></div>
+              <b class="node-live">●</b>
+            </div>
+            <div class="pipeline-link">↓</div>
+            <div class="pipeline-node">
+              <span class="pipeline-icon">⇄</span>
+              <div><strong>Load balancer</strong><small id="pipeline-strategy">Round Robin strategy</small></div>
+              <b class="node-live">●</b>
+            </div>
+            <div class="pipeline-link">↓</div>
+            <div class="worker-pool">
+              <div class="pool-heading"><strong>Worker pool</strong><small id="worker-pool-count">4 / 4 online</small></div>
+              <div class="worker-bars">
+                <span id="worker-node-1">W1</span><span id="worker-node-2">W2</span>
+                <span id="worker-node-3">W3</span><span id="worker-node-4">W4</span>
+              </div>
+            </div>
+            <div class="pipeline-link">↓</div>
+            <div class="pipeline-node" id="database-status">
+              <span class="pipeline-icon">▤</span>
+              <div><strong>Database layer</strong><small id="database-label">Simulated dependency</small></div>
+              <b class="node-live">●</b>
+            </div>
+          </div>
+          <p class="architecture-note">Educational architecture. No real cloud services are connected.</p>
+        </article>
+      </div>
+
+      <div class="lower-grid">
+        <article class="panel">
+          <div class="panel-heading">
+            <div><h3>Recent events</h3><p>Latest system activity</p></div>
+            <button class="text-button" data-view="simulation">View event log ↗</button>
+          </div>
+          <div id="event-list" class="event-list"></div>
+          <button id="dashboard-export" class="btn btn-secondary btn-full">Export event log ↓</button>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <div><h3>Queue depth history</h3><p>Backlog trend over simulation steps</p></div>
+            <span class="tag">TREND</span>
+          </div>
+          <div class="history-stats">
+            <div><span>SIMULATION STEPS</span><strong id="history-steps">0</strong></div>
+            <div><span>ESTIMATED COST</span><strong id="metric-cost">₹0.02</strong></div>
+          </div>
+          <div class="chart-wrap history-chart"><canvas id="history-chart"></canvas></div>
+          <div class="chart-legend"><span><i class="legend-dot backlog-dot"></i>Queue backlog</span><span id="backlog-summary">Queue stable</span></div>
+        </article>
+      </div>
+
+      <div class="system-overview panel">
+        <div><span>TOTAL REQUESTS</span><strong id="overview-total">10</strong></div>
+        <div><span>COMPLETED</span><strong id="overview-completed">10</strong></div>
+        <div><span>FAILED</span><strong id="overview-failed">0</strong></div>
+        <div><span>SCHEDULING STRATEGY</span><strong id="overview-strategy">Round Robin</strong></div>
+      </div>
+    </section>
+
+    <!-- SIMULATION LAB -->
+    <section id="simulation-view" class="view-section" hidden>
+      <div class="section-heading">
+        <div><div class="eyebrow">INTERACTIVE PLAYGROUND / 02</div><h2>Simulation Lab</h2>
+          <p>Change workload intensity, compare scheduling strategies and inject faults.</p></div>
+        <span class="tag">EDUCATIONAL MODEL</span>
+      </div>
+
+      <div class="simulation-grid">
+        <article class="panel">
+          <div class="panel-heading"><div><h3>Workload configuration</h3><p>Control the request generator</p></div><span class="panel-icon">⚙</span></div>
+          <div class="field-block">
+            <div class="field-heading"><label for="traffic-level">Incoming traffic</label><strong id="traffic-value">50%</strong></div>
+            <input type="range" id="traffic-level" min="0" max="100" value="50">
+            <div class="range-labels"><span>LOW · 0%</span><span>HIGH · 100%</span></div>
+            <p class="field-help">Controls how many requests are generated in each step.</p>
+          </div>
+          <div class="field-block">
+            <label for="strategy-select">Scheduling strategy</label>
+            <select id="strategy-select">
+              <option value="round-robin">Round Robin</option>
+              <option value="least-loaded">Least Loaded</option>
+              <option value="fifo">First In, First Out (FIFO)</option>
+            </select>
+            <p id="strategy-info" class="field-help">Distributes requests across workers in rotation.</p>
+          </div>
+          <div class="button-row">
+            <button id="start-pause" class="btn btn-primary">▶ Start simulation</button>
+            <button id="step-simulation" class="btn btn-secondary">+ Run one step</button>
+          </div>
+          <button id="reset-simulation" class="btn btn-quiet btn-full">↺ Reset simulation</button>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading"><div><h3>Fault injection</h3><p>Observe resilience and queue pressure</p></div><span class="panel-icon warning-icon">⚡</span></div>
+          <button id="traffic-spike" class="scenario-row"><span class="scenario-symbol">↗</span><span><strong>Traffic spike</strong><small>Increase incoming load and queue pressure</small></span><b>→</b></button>
+          <button id="worker-crash" class="scenario-row"><span class="scenario-symbol crash">×</span><span><strong>Worker failure</strong><small>Take one worker offline</small></span><b>→</b></button>
+          <button id="db-slowdown" class="scenario-row"><span class="scenario-symbol slow">◷</span><span><strong>Database slowdown</strong><small>Reduce effective processing capacity</small></span><b>→</b></button>
+          <button id="recover-faults" class="btn btn-secondary btn-full recover-btn">✓ Recover system</button>
+          <p class="notice"><strong>Simulation note:</strong> Faults affect only this browser-based model. No real servers or databases are changed.</p>
+        </article>
+      </div>
+
+      <article class="panel log-panel">
+        <div class="panel-heading"><div><h3>Event stream</h3><p>Timestamped simulation activity</p></div><button id="simulation-export" class="btn btn-secondary">Export CSV ↓</button></div>
+        <div class="table-scroll"><table><thead><tr><th>TIME</th><th>EVENT</th><th>OUTCOME</th><th>RISK</th><th>DECISION</th></tr></thead><tbody id="event-table-body"></tbody></table></div>
+      </article>
+    </section>
+
+    <!-- ARCHITECTURE -->
+    <section id="architecture-view" class="view-section" hidden>
+      <div class="section-heading">
+        <div><div class="eyebrow">SYSTEM DESIGN / 03</div><h2>Architecture</h2><p>Conceptual request path from generation to monitoring.</p></div>
+        <span class="tag">SYSTEM OVERVIEW</span>
+      </div>
+      <article class="panel architecture-panel">
+        <div class="architecture-flow">
+          <div class="architecture-node"><span class="architecture-number">01</span><div class="architecture-symbol">⇢</div><h3>Request generator</h3><p>Creates requests according to the configured traffic level.</p></div>
+          <div class="architecture-connector">→<small>New requests</small></div>
+          <div class="architecture-node"><span class="architecture-number">02</span><div class="architecture-symbol">▤</div><h3>Request queue</h3><p>Holds work while processing capacity is unavailable.</p></div>
+          <div class="architecture-connector">→<small>Queued jobs</small></div>
+          <div class="architecture-node"><span class="architecture-number">03</span><div class="architecture-symbol">⌘</div><h3>Scheduling engine</h3><p>Uses Round Robin, Least Loaded or FIFO.</p></div>
+          <div class="architecture-connector">→<small>Scheduled jobs</small></div>
+          <div class="architecture-node"><span class="architecture-number">04</span><div class="architecture-symbol">▥</div><h3>Worker pool</h3><p>Processes requests based on active worker capacity.</p></div>
+          <div class="architecture-connector">→<small>Telemetry</small></div>
+          <div class="architecture-node"><span class="architecture-number">05</span><div class="architecture-symbol">▦</div><h3>Monitoring dashboard</h3><p>Displays throughput, backlog, latency and estimated cost.</p></div>
         </div>
+      </article>
+      <div class="info-grid">
+        <article class="panel"><h3>Concepts demonstrated</h3><p>Queue management, workload scheduling, worker availability, fault injection, throughput, latency and monitoring.</p></article>
+        <article class="panel"><h3>Project scope</h3><p>QueuePulse is a browser-based educational model. Its metrics are simulated and do not represent real cloud telemetry.</p></article>
+      </div>
+    </section>
 
-        <div class="dashboard-grid">
-          <article class="panel chart-panel"><div class="panel-heading"><div><h3>Workload activity</h3><p>Queue backlog over recent simulation steps</p></div><span class="tag">LIVE SIMULATION</span></div><div class="chart-wrap"><canvas id="workload-chart" aria-label="Workload backlog chart"></canvas></div><div class="chart-legend"><span><i class="legend-dot"></i>Queue backlog</span><span id="chart-summary">Waiting for simulation data</span></div></article>
-          <article class="panel events-panel"><div class="panel-heading"><div><h3>Recent events</h3><p>Latest simulation activity</p></div><button type="button" class="text-button" data-view="simulation">View lab ↗</button></div><div id="event-list" class="event-list"><div class="empty-state"><span>⌁</span><strong>No events yet</strong><p>Start a simulation to see activity here.</p></div></div><button type="button" id="dashboard-export" class="btn btn-secondary btn-full">Export event log <span>↓</span></button></article>
-        </div>
-      </section>
-
-      <section id="simulation-view" class="view-section" hidden>
-        <div class="section-heading"><div><div class="eyebrow">INTERACTIVE PLAYGROUND</div><h2>Simulation Lab</h2><p>Adjust incoming traffic, run simulation steps and introduce faults to observe their effects.</p></div><span class="tag">EDUCATIONAL MODEL</span></div>
-        <div class="simulation-grid">
-          <article class="panel control-panel"><div class="panel-heading"><div><h3>Simulation controls</h3><p>Configure the workload</p></div><span class="panel-icon">⚙</span></div>
-            <div class="field-block"><div class="field-heading"><label for="traffic-level">Incoming traffic</label><strong id="traffic-value">50%</strong></div><input type="range" id="traffic-level" min="0" max="100" value="50" /><div class="range-labels"><span>Low</span><span>High</span></div></div>
-            <div class="field-block"><label for="strategy-select">Scheduling strategy</label><select id="strategy-select"><option value="round-robin">Round Robin</option><option value="least-loaded">Least Loaded</option><option value="fifo">First In, First Out (FIFO)</option></select><p id="strategy-info" class="field-help">Distributes requests across workers in rotation.</p></div>
-            <div class="button-row"><button type="button" id="start-pause" class="btn btn-primary">▶ Start simulation</button><button type="button" id="step-simulation" class="btn btn-secondary">+ Step</button></div><button type="button" id="reset-simulation" class="btn btn-quiet btn-full">↺ Reset simulation</button>
-          </article>
-          <article class="panel scenario-panel"><div class="panel-heading"><div><h3>Scenario controls</h3><p>Introduce a simulated condition</p></div><span class="panel-icon warning-icon">⚡</span></div>
-            <button type="button" id="traffic-spike" class="scenario-row"><span class="scenario-symbol spike">↗</span><span><strong>Traffic spike</strong><small>Suddenly increase incoming requests</small></span><span class="scenario-arrow">→</span></button>
-            <button type="button" id="worker-crash" class="scenario-row"><span class="scenario-symbol crash">×</span><span><strong>Worker failure</strong><small>Take one worker offline</small></span><span class="scenario-arrow">→</span></button>
-            <button type="button" id="db-slowdown" class="scenario-row"><span class="scenario-symbol slow">◷</span><span><strong>Database slowdown</strong><small>Increase processing latency</small></span><span class="scenario-arrow">→</span></button>
-            <button type="button" id="recover-faults" class="btn btn-secondary btn-full recover-btn">✓ Recover system</button>
-            <p class="notice"><strong>Note:</strong> These controls change simulated values only. No real cloud resources are used.</p>
-          </article>
-        </div>
-        <article class="panel log-panel"><div class="panel-heading"><div><h3>Event log</h3><p>A chronological record of simulation activity</p></div><button type="button" id="simulation-export" class="btn btn-secondary">Export CSV ↓</button></div><div class="table-scroll"><table><thead><tr><th>TIME</th><th>EVENT</th><th>OUTCOME</th><th>RISK</th><th>DECISION</th></tr></thead><tbody id="event-table-body"><tr><td colspan="5" class="table-empty">No events recorded yet.</td></tr></tbody></table></div></article>
-      </section>
-
-      <section id="architecture-view" class="view-section" hidden>
-        <div class="section-heading"><div><div class="eyebrow">SYSTEM DESIGN</div><h2>Architecture</h2><p>Follow a request from arrival to processing and monitoring.</p></div><span class="tag">SYSTEM OVERVIEW</span></div>
-        <article class="panel architecture-panel"><div class="architecture-flow">
-          <div class="architecture-node"><span class="architecture-number">01</span><div class="architecture-symbol">⇢</div><h3>Request generator</h3><p>Creates incoming requests based on the selected traffic level.</p></div><div class="architecture-connector"><span>↓</span><small>New requests</small></div>
-          <div class="architecture-node"><span class="architecture-number">02</span><div class="architecture-symbol">▤</div><h3>Request queue</h3><p>Stores requests that are waiting for available capacity.</p></div><div class="architecture-connector"><span>↓</span><small>Queued jobs</small></div>
-          <div class="architecture-node"><span class="architecture-number">03</span><div class="architecture-symbol">⌘</div><h3>Scheduling engine</h3><p>Applies Round Robin, Least Loaded or FIFO scheduling.</p></div><div class="architecture-connector"><span>↓</span><small>Scheduled jobs</small></div>
-          <div class="architecture-node"><span class="architecture-number">04</span><div class="architecture-symbol">▥</div><h3>Worker pool</h3><p>Processes requests using the workers currently available.</p></div><div class="architecture-connector"><span>↓</span><small>Metrics</small></div>
-          <div class="architecture-node"><span class="architecture-number">05</span><div class="architecture-symbol">▦</div><h3>Monitoring dashboard</h3><p>Displays backlog, latency, worker count and estimated cost.</p></div>
-        </div></article>
-        <div class="info-grid"><article class="panel"><div class="info-heading"><span class="info-icon">◎</span><h3>What this demonstrates</h3></div><p>Queue management, workload scheduling, worker availability, fault scenarios and monitoring metrics.</p></article><article class="panel"><div class="info-heading"><span class="info-icon">⌁</span><h3>Project scope</h3></div><p>QueuePulse is a browser-based educational simulation. It does not connect to or control a real cloud platform.</p></article></div>
-      </section>
-
-      <footer class="footer"><span>QueuePulse <span class="footer-separator">/</span> Cloud Workload Simulator</span><span>Built for learning · Simulation only</span></footer>
-    </main>
-  </div>
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="app.js"></script>
+    <footer class="footer"><span>QueuePulse <b>/</b> Cloud Workload Simulator</span><span>Built for learning · Simulated telemetry</span></footer>
+  </main>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="app.js"></script>
 </body>
 </html>
