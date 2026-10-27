@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080d19">
+  <meta name="description" content="QueuePulse cloud architecture design — target production architecture for the queue monitoring system.">
+  <title>Cloud Architecture | QueuePulse</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235eead4'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='18' fill='%2307121c' text-anchor='middle'%3EQ%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+  <style>
+    .arch-diagram { width: 100%; max-width: 960px; margin: 0 auto; display: block; }
+    .diagram-scroll { overflow-x: auto; }
+    .diagram-scroll .arch-diagram { min-width: 700px; }
+    .arch-flow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .arch-box { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+    .arch-box h3 { margin: 0 0 6px; font-size: 13px; letter-spacing: -.2px; }
+    .arch-box p { color: #a7b4c8; font-size: 12px; line-height: 1.6; margin: 0; }
+    .arch-box small { display: block; color: var(--teal); font-size: 10px; letter-spacing: .8px; margin-bottom: 8px; font-weight: 700; }
+    .arch-arrow { text-align: center; color: var(--teal); font-size: 18px; padding: 2px 0; }
+    @media (max-width: 760px) { .arch-flow { grid-template-columns: 1fr; } .arch-arrow { transform: rotate(90deg); padding: 6px 0; } }
+    .lit-table td { white-space: normal; line-height: 1.5; vertical-align: top; }
+    .lit-table a { color: var(--teal); text-decoration: none; }
+    .lit-table a:hover { text-decoration: underline; }
+    .pattern-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; }
+  </style>
+</head>
+<body data-page="architecture">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="./index.html">
+        <span class="brand-icon">Q</span>
+        <span>Queue<span class="accent">Pulse</span></span>
+      </a>
+      <div class="nav-label">WORKSPACE</div>
+      <a class="nav-item" href="./index.html"><span>▦</span> Overview</a>
+      <a class="nav-item" href="./metrics.html"><span>⌁</span> Metrics</a>
+      <a class="nav-item" href="./activity.html"><span>≡</span> Activity logs</a>
+      <a class="nav-item" href="./workers.html"><span>◎</span> Workers & Queues</a>
+      <a class="nav-item active" href="./architecture.html"><span>◈</span> Cloud Architecture</a>
+      <a class="nav-item" href="./about.html"><span>ⓘ</span> About Project</a>
+      <div class="sidebar-bottom">
+        <div class="status-dot" id="statusDot"></div>
+        <div>
+          <strong>Demo system status</strong>
+          <small id="demoStatus">All systems operational</small>
+        </div>
+      </div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">DESIGN / TARGET ARCHITECTURE</div>
+          <h1>Cloud architecture</h1>
+          <p class="muted">The production system this dashboard is designed to monitor.</p>
+        </div>
+        <div class="topbar-right">
+          <span class="live-indicator"><span></span> DESIGN DOCUMENT</span>
+        </div>
+      </header>
+
+      <section class="notice">
+        <div class="notice-icon">◈</div>
+        <div>
+          <strong>The prototype is the monitoring plane — this is the system it monitors</strong>
+          <p>QueuePulse's live pages are a browser simulation. This page documents the cloud architecture that simulation represents: a queue-driven, auto-scaling job pipeline on AWS.</p>
+        </div>
+        <span class="demo-tag">TARGET ARCHITECTURE</span>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <h2>High-level design</h2>
+            <p class="muted">Five tiers: ingest, broker, workers, data, observability.</p>
+          </div>
+          <span class="period-label">REFERENCE: AWS</span>
+        </div>
+        <div class="panel diagram-scroll">
+          <svg class="arch-diagram" viewBox="0 0 960 620" role="img" aria-label="QueuePulse target cloud architecture diagram">
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#5eead4"></path>
+              </marker>
+              <marker id="arrowPurple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#a78bfa"></path>
+              </marker>
+              <marker id="arrowOrange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#fb923c"></path>
+              </marker>
+            </defs>
+
+            <!-- Clients -->
+            <rect x="20" y="40" width="160" height="70" rx="10" fill="#101827" stroke="#202c40"></rect>
+            <text x="100" y="68" fill="#e8eef8" font-size="13" font-weight="600" text-anchor="middle">Client apps</text>
+            <text x="100" y="88" fill="#8492a9" font-size="10" text-anchor="middle">web · services · APIs</text>
+
+            <!-- API Gateway -->
+            <rect x="20" y="150" width="160" height="70" rx="10" fill="#101827" stroke="#202c40"></rect>
+            <text x="100" y="178" fill="#e8eef8" font-size="13" font-weight="600" text-anchor="middle">API Gateway</text>
+            <text x="100" y="198" fill="#8492a9" font-size="10" text-anchor="middle">submit job · read API</text>
+
+            <!-- SQS broker -->
+            <rect x="230" y="90" width="180" height="190" rx="10" fill="#101827" stroke="#28504d"></rect>
+            <text x="320" y="115" fill="#5eead4" font-size="12" font-weight="700" text-anchor="middle">SQS queues</text>
+            <text x="320" y="132" fill="#8492a9" font-size="10" text-anchor="middle">one per job class + DLQ</text>
+            <rect x="245" y="150" width="150" height="30" rx="6" fill="#173a3a" stroke="#28504d"></rect>
+            <text x="320" y="169" fill="#80d8cb" font-size="10" text-anchor="middle">media-worker</text>
+            <rect x="245" y="190" width="150" height="30" rx="6" fill="#173a3a" stroke="#28504d"></rect>
+            <text x="320" y="209" fill="#80d8cb" font-size="10" text-anchor="middle">notifications</text>
+            <rect x="245" y="230" width="150" height="30" rx="6" fill="#173a3a" stroke="#28504d"></rect>
+            <text x="320" y="249" fill="#80d8cb" font-size="10" text-anchor="middle">background</text>
+
+            <!-- Worker fleets -->
+            <rect x="460" y="90" width="200" height="190" rx="10" fill="#101827" stroke="#28504d"></rect>
+            <text x="560" y="115" fill="#5eead4" font-size="12" font-weight="700" text-anchor="middle">Worker fleets</text>
+            <text x="560" y="132" fill="#8492a9" font-size="10" text-anchor="middle">ECS Fargate · competing consumers</text>
+            <rect x="475" y="150" width="170" height="30" rx="6" fill="#1c2740" stroke="#202c40"></rect>
+            <text x="560" y="169" fill="#a9bcd4" font-size="10" text-anchor="middle">media fleet</text>
+            <rect x="475" y="190" width="170" height="30" rx="6" fill="#1c2740" stroke="#202c40"></rect>
+            <text x="560" y="209" fill="#a9bcd4" font-size="10" text-anchor="middle">notifications fleet</text>
+            <rect x="475" y="230" width="170" height="30" rx="6" fill="#1c2740" stroke="#202c40"></rect>
+            <text x="560" y="249" fill="#a9bcd4" font-size="10" text-anchor="middle">background fleet</text>
+
+            <!-- Data tier -->
+            <rect x="710" y="90" width="230" height="190" rx="10" fill="#101827" stroke="#202c40"></rect>
+            <text x="825" y="115" fill="#a78bfa" font-size="12" font-weight="700" text-anchor="middle">Data &amp; artifacts</text>
+            <text x="825" y="132" fill="#8492a9" font-size="10" text-anchor="middle">job records · outputs</text>
+            <rect x="725" y="150" width="200" height="30" rx="6" fill="#2a2245" stroke="#202c40"></rect>
+            <text x="825" y="169" fill="#c4a6ff" font-size="10" text-anchor="middle">DynamoDB — job status, idempotency</text>
+            <rect x="725" y="190" width="200" height="30" rx="6" fill="#2a2245" stroke="#202c40"></rect>
+            <text x="825" y="209" fill="#c4a6ff" font-size="10" text-anchor="middle">S3 — job artifacts</text>
+            <rect x="725" y="230" width="200" height="30" rx="6" fill="#2a2245" stroke="#202c40"></rect>
+            <text x="825" y="249" fill="#c4a6ff" font-size="10" text-anchor="middle">CloudWatch — metrics, logs</text>
+
+            <!-- Auto-scaling loop -->
+            <rect x="460" y="310" width="200" height="56" rx="10" fill="#101827" stroke="#5c3f2c"></rect>
+            <text x="560" y="332" fill="#fb923c" font-size="11" font-weight="600" text-anchor="middle">Auto-scaling</text>
+            <text x="560" y="350" fill="#8492a9" font-size="10" text-anchor="middle">target-tracking on backlog per worker</text>
+
+            <!-- Dead-letter path -->
+            <rect x="230" y="310" width="180" height="56" rx="10" fill="#101827" stroke="#5c3f2c"></rect>
+            <text x="320" y="332" fill="#fb923c" font-size="11" font-weight="600" text-anchor="middle">Dead-letter queues</text>
+            <text x="320" y="350" fill="#8492a9" font-size="10" text-anchor="middle">poison messages · alarm</text>
+
+            <!-- Arrows: clients -> gateway -->
+            <line x1="100" y1="110" x2="100" y2="150" stroke="#5eead4" stroke-width="1.6" marker-end="url(#arrow)"></line>
+
+            <!-- gateway -> broker -->
+            <path d="M 180 185 C 205 185, 205 150, 230 160" fill="none" stroke="#5eead4" stroke-width="1.6" marker-end="url(#arrow)"></path>
+
+            <!-- broker -> workers -->
+            <line x1="410" y1="185" x2="460" y2="185" stroke="#5eead4" stroke-width="1.6" marker-end="url(#arrow)"></line>
+
+            <!-- workers -> data -->
+            <line x1="660" y1="185" x2="710" y2="185" stroke="#5eead4" stroke-width="1.6" marker-end="url(#arrow)"></line>
+
+            <!-- broker -> DLQ -->
+            <line x1="320" y1="280" x2="320" y2="310" stroke="#fb923c" stroke-width="1.6" marker-end="url(#arrowOrange)"></line>
+
+            <!-- workers <-> autoscaling -->
+            <path d="M 560 310 L 560 280" fill="none" stroke="#fb923c" stroke-width="1.6" stroke-dasharray="4 4" marker-end="url(#arrowOrange)"></path>
+
+            <!-- Observability band -->
+            <rect x="20" y="410" width="920" height="80" rx="10" fill="#101827" stroke="#202c40"></rect>
+            <text x="480" y="438" fill="#5eead4" font-size="12" font-weight="700" text-anchor="middle">Observability plane — the dashboard's read path</text>
+            <text x="480" y="458" fill="#8492a9" font-size="10" text-anchor="middle">authenticated read API -> aggregation service -> CloudWatch + DynamoDB queries -> this dashboard</text>
+            <text x="480" y="476" fill="#8492a9" font-size="10" text-anchor="middle">alarms: backlog age > 15 min · DLQ depth > 0 · failure rate > 5% · fleet below minimum</text>
+
+            <!-- arrows to observability -->
+            <line x1="100" y1="220" x2="100" y2="410" stroke="#a78bfa" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#arrowPurple)"></line>
+            <line x1="825" y1="280" x2="825" y2="410" stroke="#a78bfa" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#arrowPurple)"></line>
+
+            <!-- pattern labels -->
+            <text x="480" y="545" fill="#8492a9" font-size="10" text-anchor="middle">Patterns: queue-based load leveling · competing consumers · retry with backoff · circuit breaker · idempotent consumers</text>
+            <text x="480" y="565" fill="#8492a9" font-size="10" text-anchor="middle">Delivery semantics: at-least-once (SQS standard) · duplicates handled by idempotency keys</text>
+            <text x="480" y="600" fill="#6f7f97" font-size="9" text-anchor="middle">Design document: ARCHITECTURE.md · literature comparison below</text>
+          </svg>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <h2>Why each choice</h2>
+            <p class="muted">Decisions justified against published research.</p>
+          </div>
+        </div>
+        <div class="arch-flow">
+          <div class="arch-box">
+            <small>01 · MESSAGE BROKER</small>
+            <h3>Amazon SQS — managed, not self-hosted</h3>
+            <p>Comparative studies of Kafka, Pulsar, Artemis and RocketMQ show broker choice is a throughput-vs-operations trade-off. For job dispatch (consume once, no replay), a managed queue removes broker ops entirely; Kafka returns only if streaming analytics is added later.</p>
+          </div>
+          <div class="arch-box">
+            <small>02 · WORKERS</small>
+            <h3>Containers, not serverless</h3>
+            <p>Serverless reviews document cold-start latency and per-request limits. Long-running jobs (video transcoding) fit containers better — while queue-driven autoscaling keeps the fleet elastic. This initial design is CPU-only on Fargate; GPU media jobs would need EC2-backed tasks and are out of scope.</p>
+          </div>
+          <div class="arch-box">
+            <small>03 · SCALING</small>
+            <h3>Scale on backlog, not CPU</h3>
+            <p>Target-tracking on backlog-per-worker: with backlog B, average job time s and wait target T, keep roughly ceil(B × s / T) workers. Research on event-queue autoscaling shows these parameters must be measured and tuned — they are not guarantees.</p>
+          </div>
+          <div class="arch-box">
+            <small>04 · RELIABILITY</small>
+            <h3>At-least-once + idempotency</h3>
+            <p>At-least-once delivery means duplicates happen: workers claim jobs atomically and downstream side effects must be idempotent. Retries space out with backoff and jitter; after 5 attempts a message drains to a dead-letter queue with alarms.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <h2>Prototype to production map</h2>
+            <p class="muted">Every simulated element corresponds to a real component.</p>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr><th>PROTOTYPE (SIMULATED)</th><th>PRODUCTION (DESIGNED)</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>3 queue cards (media, notifications, background)</td><td>3 SQS standard queues + 3 dead-letter queues</td></tr>
+                <tr><td>10 workers with pause / fail / recover actions</td><td>ECS services with health checks, target-tracking autoscaling, auto-replacement</td></tr>
+                <tr><td>Pending → Completed / Failed event transitions</td><td>SQS receive → process → DynamoDB status write → message delete</td></tr>
+                <tr><td>sessionStorage demo state</td><td>DynamoDB job records + CloudWatch metrics</td></tr>
+                <tr><td>Refresh data button</td><td>Read-model API call (API Gateway → aggregation service)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <h2>Related work</h2>
+            <p class="muted">How this design compares to published research and reference architectures.</p>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="table-scroll">
+            <table class="lit-table">
+              <thead>
+                <tr><th>SOURCE</th><th>FOCUS</th><th>RELATION TO QUEUEPULSE</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><a href="https://www.mdpi.com/2079-9292/12/23/4792" target="_blank" rel="noopener">Comparative Evaluation of JVM Message Queue Services (Chy et al., 2023)</a></td>
+                  <td>Compares Kafka, Artemis, Pulsar, RocketMQ (abstract-based)</td>
+                  <td>Informs broker decision: job-dispatch workload → managed SQS; revisit if streaming analytics is added</td>
+                </tr>
+                <tr>
+                  <td><a href="https://juti.if.its.ac.id/index.php/juti/article/view/1345" target="_blank" rel="noopener">Kafka vs RabbitMQ Comparative Study (Ramadan et al., 2026)</a></td>
+                  <td>Performance and stress testing of the two dominant brokers (abstract-based)</td>
+                  <td>Frames the throughput-vs-routing-reliability trade-off our SQS choice resolves operationally</td>
+                </tr>
+                <tr>
+                  <td><a href="https://wjarr.com/node/8791" target="_blank" rel="noopener">Kafka to SNS-SQS Integration Analysis (Panwar, 2025)</a></td>
+                  <td>Cost and DevOps overhead of hybrid event-driven messaging</td>
+                  <td>Supports managed cloud queues on operational-cost grounds; hybrid noted as a future option</td>
+                </tr>
+                <tr>
+                  <td><a href="https://link.springer.com/10.1007/s42979-025-03740-9" target="_blank" rel="noopener">Bin-Pack Autoscaling for Distributed Event Queues (Ezzeddine et al., 2025)</a></td>
+                  <td>Parameter impact for latency-aware autoscaling (abstract-based)</td>
+                  <td>Directly informs our backlog-per-worker policy and cooldown parameter choices</td>
+                </tr>
+                <tr>
+                  <td><a href="https://www.semanticscholar.org/paper/7d412cc4512a24be1b4c2e42501e20dd8db776fe" target="_blank" rel="noopener">Worker-Pool Orchestration for LLM Workloads (Kumar et al., 2026)</a></td>
+                  <td>Priority task queue with dynamic worker pool for bursty cloud workloads (abstract-based)</td>
+                  <td>Same architecture shape (queue + dynamic pool) — supports queue-driven scaling for bursty job mixes</td>
+                </tr>
+                <tr>
+                  <td><a href="https://ieeexplore.ieee.org/document/10544765" target="_blank" rel="noopener">FaaS Performance & Security Review (Abdulrahman et al., 2024)</a></td>
+                  <td>Cold starts, scaling behaviour, security in serverless (abstract-based)</td>
+                  <td>Documents why long-running jobs stay on containers rather than functions</td>
+                </tr>
+                <tr>
+                  <td><a href="https://link.springer.com/10.1007/s42452-025-07320-7" target="_blank" rel="noopener">Fault-Tolerant Microservices with Docker & Spring Cloud (Zhang et al., 2025)</a></td>
+                  <td>Health checks, clustering, multi-level fault tolerance (abstract-based)</td>
+                  <td>Supports our health-check, circuit-breaker, fleet-replacement reliability design</td>
+                </tr>
+                <tr>
+                  <td><a href="https://learn.microsoft.com/en-us/azure/architecture/patterns/queue-based-load-leveling" target="_blank" rel="noopener">Queue-Based Load Leveling (Azure Architecture Center)</a></td>
+                  <td>Canonical cloud design pattern for peak absorption</td>
+                  <td>The core decoupling pattern our pipeline implements</td>
+                </tr>
+                <tr>
+                  <td><a href="https://keda.sh/" target="_blank" rel="noopener">KEDA — Kubernetes Event-Driven Autoscaling</a></td>
+                  <td>Scales containers on queue length; supports scale-to-zero</td>
+                  <td>The EKS-native equivalent of our ECS target-tracking design</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <h2>Design patterns applied</h2>
+            <p class="muted">Named patterns a reviewer can check against.</p>
+          </div>
+        </div>
+        <div class="pattern-list">
+          <div class="about-card"><h3>Queue-based load leveling</h3><p>Producers never call workers directly — the queue absorbs peaks so workers size for average, not peak load.</p></div>
+          <div class="about-card"><h3>Competing consumers</h3><p>Each fleet polls one queue; each delivery goes to one worker. Duplicate delivery is still possible, so processing must tolerate repeated attempts.</p></div>
+          <div class="about-card"><h3>Dead-letter queue</h3><p>Messages that fail repeatedly drain to a DLQ with alarms — failed jobs become visible, not invisible.</p></div>
+          <div class="about-card"><h3>Retry with backoff + jitter</h3><p>Transient failures retry exponentially; jitter prevents synchronized retry storms.</p></div>
+          <div class="about-card"><h3>Idempotent consumers</h3><p>At-least-once delivery means duplicates; atomic job claims and idempotent downstream side effects make repeated attempts safe.</p></div>
+          <div class="about-card"><h3>Circuit breaker</h3><p>Flaky external dependencies fail fast instead of piling up blocked workers.</p></div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <span>QueuePulse <span class="muted">· Queue monitoring dashboard</span></span>
+        <span>Prabha Khiani (24BDS0354) · Sam Nagar (24BCE2871) · Educational prototype · Simulated metrics</span>
+      </footer>
+    </main>
+  </div>
+  <script src="./app.js" defer></script>
+</body>
+</html>

@@ -7,9 +7,19 @@ Overview	index.html	Jobs processed, queue depth, failed jobs, active workers, th
 Metrics	metrics.html	Throughput over time, queue-depth trend, failure-rate statistics, worker utilization, 1H/6H/24H/7D time-range selector
 Activity logs	activity.html	Searchable, filterable and sortable event log with status badges and timestamps
 Workers & Queues	workers.html	Worker status cards with simulated pause/fail/recover actions, queue cards with pending and processing counts
+Cloud Architecture	architecture.html	Target production architecture: diagram, component decisions, design patterns, prototype-to-production map, related-work comparison
 About Project	about.html	Project purpose, features, technologies, team and educational disclaimer
 Files
-index.html, metrics.html, activity.html, workers.html, about.html — the five dashboard pages (shared sidebar, footer and design)
+index.html, metrics.html, activity.html, workers.html, architecture.html, about.html — the six dashboard pages (shared sidebar, footer and design)
+
+## Cloud architecture design
+
+The dashboard is a simulation of the monitoring plane of a distributed job system. The design of that system — a queue-driven, auto-scaling pipeline on AWS (SQS + ECS Fargate workers + DynamoDB + CloudWatch) — is documented in:
+
+- `ARCHITECTURE.md` — full design document: requirements, component decisions justified against published research, scaling policy, failure handling, security, observability, phased roadmap.
+- `architecture.html` — the same design presented as a dashboard page with a diagram and related-work comparison.
+
+Design highlights: queue-based load leveling, competing consumers, dead-letter queues with alarms, at-least-once delivery handled with atomic job claims and idempotent side effects, and target-tracking autoscaling on backlog-per-worker.
 
 styles.css — responsive dark navy and teal design system
 
