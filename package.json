@@ -1,0 +1,12 @@
+{
+  "name": "queuepulse",
+  "version": "2.0.0",
+  "description": "Queue monitoring dashboard with a working queue engine, Job Lab, real-time server and AWS phase-1 template.",
+  "scripts": {
+    "start": "node server/server.js",
+    "test": "node --test test/engine.test.js",
+    "bench": "node bench/loadtest.js"
+  },
+  "engines": { "node": ">=18" },
+  "license": "MIT"
+}

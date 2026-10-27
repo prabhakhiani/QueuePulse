@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080d19">
+  <meta name="description" content="QueuePulse Job Lab — submit your own jobs to a working queue engine and watch retries, dead-letter queues and auto-scaling.">
+  <title>Job Lab | QueuePulse</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235eead4'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='18' fill='%2307121c' text-anchor='middle'%3EQ%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-page="lab">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="./index.html">
+        <span class="brand-icon">Q</span>
+        <span>Queue<span class="accent">Pulse</span></span>
+      </a>
+      <div class="nav-label">WORKSPACE</div>
+      <a class="nav-item" href="./index.html"><span>▦</span> Overview</a>
+      <a class="nav-item" href="./metrics.html"><span>⌁</span> Metrics</a>
+      <a class="nav-item" href="./activity.html"><span>≡</span> Activity logs</a>
+      <a class="nav-item" href="./workers.html"><span>◎</span> Workers & Queues</a>
+      <a class="nav-item active" href="./lab.html"><span>▶</span> Job Lab</a>
+      <a class="nav-item" href="./architecture.html"><span>◈</span> Cloud Architecture</a>
+      <a class="nav-item" href="./about.html"><span>ⓘ</span> About Project</a>
+      <div class="sidebar-bottom">
+        <div class="status-dot" id="statusDot"></div>
+        <div>
+          <strong>Engine status</strong>
+          <small id="demoStatus">Starting…</small>
+        </div>
+      </div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">TRY IT / WORKING ENGINE</div>
+          <h1>Job Lab</h1>
+          <p class="muted">Submit your own jobs, change the scaling rules, crash a worker, and watch the system respond.</p>
+        </div>
+        <div class="topbar-right">
+          <span class="live-indicator"><span></span> <b id="modeBadge">BROWSER ENGINE</b></span>
+          <button class="secondary-button" id="pauseBtn" type="button">Ⅱ Pause</button>
+          <button class="primary-button" id="resetBtn" type="button">Reset</button>
+        </div>
+      </header>
+
+      <section class="notice">
+        <div class="notice-icon">▶</div>
+        <div>
+          <strong id="modeTitle">Real queue logic, simulated cloud</strong>
+          <p id="modeNote">A working engine runs in this tab: visibility timeouts, retries with backoff, dead-letter queues, idempotent claims and backlog-based auto-scaling. It models AWS SQS and ECS behaviour but does not call AWS.</p>
+        </div>
+        <span class="demo-tag" id="modeTag">RUNS IN YOUR BROWSER</span>
+      </section>
+
+      <section class="section">
+        <div class="lab-kpis" id="kpis"></div>
+      </section>
+
+      <section class="section lab-two">
+        <div class="panel">
+          <div class="panel-heading"><div><h2>Send work</h2><p class="muted">Each job goes to a queue and waits for a free worker.</p></div></div>
+          <form class="lab-form" id="jobForm" autocomplete="off">
+            <label class="lab-field">Queue
+              <select id="jobQueue"><option value="media-worker">media-worker</option><option value="notifications">notifications</option><option value="background" selected>background</option></select>
+            </label>
+            <label class="lab-field">Job name
+              <input id="jobName" type="text" maxlength="60" value="Send appointment confirmation">
+            </label>
+            <label class="lab-field">Run time (seconds)
+              <input id="jobDur" type="number" min="0.1" max="120" step="0.1" value="2">
+            </label>
+            <label class="lab-field">Chance each try fails (%)
+              <input id="jobFail" type="number" min="0" max="100" step="1" value="0">
+            </label>
+            <label class="lab-field lab-wide">Idempotency key (optional)
+              <input id="jobKey" type="text" maxlength="64" placeholder="e.g. booking-1042. Sending the same key twice runs the job once.">
+            </label>
+            <div class="lab-wide lab-actions">
+              <button class="primary-button" type="submit">Submit job</button>
+              <span class="muted lab-result" id="jobResult" role="status" aria-live="polite">Nothing submitted yet.</span>
+            </div>
+          </form>
+          <div class="lab-sub">Send a burst</div>
+          <form class="lab-form lab-burst" id="burstForm" autocomplete="off">
+            <label class="lab-field">Queue
+              <select id="burstQueue"><option value="mixed">all three</option><option value="media-worker">media-worker</option><option value="notifications">notifications</option><option value="background">background</option></select>
+            </label>
+            <label class="lab-field">Jobs
+              <input id="burstCount" type="number" min="1" max="5000" value="200">
+            </label>
+            <label class="lab-field">Run time (s)
+              <input id="burstDur" type="number" min="0.1" max="120" step="0.1" value="2">
+            </label>
+            <label class="lab-field">Fail (%)
+              <input id="burstFail" type="number" min="0" max="100" value="0">
+            </label>
+            <div class="lab-wide lab-actions"><button class="secondary-button" type="submit">Send burst</button></div>
+          </form>
+          <div class="lab-sub">Scenarios</div>
+          <div class="lab-presets">
+            <button class="chip" type="button" data-preset="rush">Booking rush: 300 confirmations + 60 reports</button>
+            <button class="chip" type="button" data-preset="upload">Upload spike: 80 videos</button>
+            <button class="chip" type="button" data-preset="poison">Poison jobs: 10 that always fail</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-heading"><div><h2>Tune the system</h2><p class="muted">Change the rules, press Apply, and send a burst to see the difference.</p></div></div>
+          <form class="lab-form" id="cfgForm" autocomplete="off">
+            <label class="lab-field">Longest acceptable wait, T (s)
+              <input id="cfgT" type="number" min="1" max="3600" value="30">
+            </label>
+            <label class="lab-field">Visibility timeout (s)
+              <input id="cfgVis" type="number" min="1" max="600" value="15">
+            </label>
+            <label class="lab-field">Minimum workers per queue
+              <input id="cfgMin" type="number" min="0" max="50" value="1">
+            </label>
+            <label class="lab-field">Maximum workers per queue
+              <input id="cfgMax" type="number" min="1" max="100" value="20">
+            </label>
+            <label class="lab-field">Worker start-up time (s)
+              <input id="cfgStart" type="number" min="0" max="60" value="3">
+            </label>
+            <label class="lab-field">Tries before dead-letter
+              <input id="cfgTries" type="number" min="1" max="20" value="5">
+            </label>
+            <label class="lab-field">Repeat deliveries (%)
+              <input id="cfgDup" type="number" min="0" max="100" value="0">
+            </label>
+            <label class="lab-check"><input id="cfgAuto" type="checkbox" checked> Auto-scale on backlog</label>
+            <label class="lab-check"><input id="cfgBeat" type="checkbox" checked> Workers extend the timeout while busy</label>
+            <div class="lab-wide lab-actions"><button class="primary-button" type="submit">Apply</button></div>
+          </form>
+          <div class="lab-formula" id="formula">workers = ceil(B × s ÷ T)</div>
+          <div class="lab-sub">Speed</div>
+          <div class="chip-group" id="speedGroup">
+            <button class="chip active" type="button" data-speed="1">1×</button>
+            <button class="chip" type="button" data-speed="5">5×</button>
+            <button class="chip" type="button" data-speed="20">20×</button>
+          </div>
+          <div class="lab-sub">Use a server instead</div>
+          <form class="lab-form" id="serverForm" autocomplete="off">
+            <label class="lab-field lab-wide">Server address
+              <input id="serverUrl" type="url" placeholder="http://localhost:8080">
+            </label>
+            <div class="lab-wide lab-actions">
+              <button class="secondary-button" type="submit">Connect</button>
+              <button class="secondary-button" type="button" id="localBtn">Use browser engine</button>
+              <span class="muted lab-result" id="serverResult" role="status" aria-live="polite"></span>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="chart-grid-2">
+          <div class="panel">
+            <div class="panel-heading"><div><h2>Jobs waiting</h2><p class="muted">Backlog across all queues, last 5 minutes.</p></div><span class="period-label" id="depthNow">0</span></div>
+            <div class="chart-wrap chart-wrap-short"><canvas id="depthChart"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-heading"><div><h2>Workers running</h2><p class="muted">Fleet size across all queues, last 5 minutes.</p></div><span class="period-label" id="workersNow">0</span></div>
+            <div class="chart-wrap chart-wrap-short"><canvas id="workerChart"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-heading"><div><h2>Queues</h2><p class="muted">Each queue has its own worker fleet and dead-letter queue.</p></div></div>
+        <div class="lab-queues" id="queueCards"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-heading"><div><h2>Worker fleet</h2><p class="muted">Crash a busy worker and watch its job come back after the visibility timeout.</p></div><span class="period-label" id="fleetCount"></span></div>
+        <div class="lab-fleet" id="fleet"></div>
+      </section>
+
+      <section class="section lab-two">
+        <div class="panel">
+          <div class="panel-heading"><div><h2>Alarms</h2><p class="muted">The same rules the CloudWatch alarms use in the AWS design.</p></div></div>
+          <ul class="lab-alarms" id="alarms"></ul>
+        </div>
+        <div class="panel">
+          <div class="panel-heading"><div><h2>Event log</h2><p class="muted">Newest first.</p></div><button class="secondary-button btn-sm" id="exportBtn" type="button">Export run (JSON)</button></div>
+          <ol class="lab-log" id="log"></ol>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <span>QueuePulse <span class="muted">· Job Lab</span></span>
+        <span>Prabha Khiani (24BDS0354) · Sam Nagar (24BCE2871) · The engine models SQS/ECS behaviour; it does not call AWS</span>
+      </footer>
+    </main>
+  </div>
+  <script src="./app.js" defer></script>
+  <script src="./engine.js" defer></script>
+  <script src="./lab.js" defer></script>
+</body>
+</html>

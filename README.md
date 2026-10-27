@@ -1,50 +1,81 @@
-QueuePulse — Queue Monitoring Dashboard
-QueuePulse is a browser-based educational prototype of a queue monitoring dashboard. It demonstrates request queues, worker fleets, job events and dashboard analytics with fully simulated data. It does not connect to or manage any real cloud platform or production queue.
+# QueuePulse
 
-Pages
-Page	File	What it shows
-Overview	index.html	Jobs processed, queue depth, failed jobs, active workers, throughput chart, job-status donut, recent activity
-Metrics	metrics.html	Throughput over time, queue-depth trend, failure-rate statistics, worker utilization, 1H/6H/24H/7D time-range selector
-Activity logs	activity.html	Searchable, filterable and sortable event log with status badges and timestamps
-Workers & Queues	workers.html	Worker status cards with simulated pause/fail/recover actions, queue cards with pending and processing counts
-Cloud Architecture	architecture.html	Target production architecture: diagram, component decisions, design patterns, prototype-to-production map, related-work comparison
-About Project	about.html	Project purpose, features, technologies, team and educational disclaimer
-Files
-index.html, metrics.html, activity.html, workers.html, architecture.html, about.html — the six dashboard pages (shared sidebar, footer and design)
+**A working queue-processing engine, a live dashboard to operate it, and the AWS design it is built to run on.**
 
-## Cloud architecture design
+Live site: https://prabhakhiani.github.io/QueuePulse/ (open **Job Lab**)
 
-The dashboard is a simulation of the monitoring plane of a distributed job system. The design of that system — a queue-driven, auto-scaling pipeline on AWS (SQS + ECS Fargate workers + DynamoDB + CloudWatch) — is documented in:
+Team: Prabha Khiani (24BDS0354), Sam Nagar (24BCE2871)
 
-- `ARCHITECTURE.md` — full design document: requirements, component decisions justified against published research, scaling policy, failure handling, security, observability, phased roadmap.
-- `architecture.html` — the same design presented as a dashboard page with a diagram and related-work comparison.
+## What is real and what is not
 
-Design highlights: queue-based load leveling, competing consumers, dead-letter queues with alarms, at-least-once delivery handled with atomic job claims and idempotent side effects, and target-tracking autoscaling on backlog-per-worker.
+| Part | Status |
+|---|---|
+| Queue engine (`engine.js`): visibility timeout, at-least-once delivery, retries with backoff, dead-letter queue, idempotent claims, worker crashes, backlog-based auto-scaling | **Implemented and tested** (9 automated tests) |
+| Job Lab (`lab.html`): you submit jobs, change the rules, crash workers | **Implemented**, runs in the browser or against the server |
+| Real-time server (`server/server.js`): the same engine behind an HTTP API | **Implemented**, runs on your machine |
+| Load test (`bench/loadtest.js`, `docs/RESULTS.md`) | **Implemented**: measures the engine's policy, not AWS |
+| AWS phase 1 (`infra/queuepulse.yaml`): queues, DLQs, table, bucket, alarms, worker policies | **Written and linted**, not yet deployed |
+| AWS worker (`aws/worker.js`) | **Written, not yet run on AWS** |
+| Fargate service and backlog auto-scaling on AWS | **Designed** (see `ARCHITECTURE.md`) |
+| Overview, Metrics, Activity, Workers pages | Still **simulated** with seeded demo data |
 
-styles.css — responsive dark navy and teal design system
+The engine models SQS and ECS behaviour. It never calls AWS, and nothing here claims AWS performance numbers.
 
-app.js — shared script: demo state (sessionStorage), canvas charts, navigation behaviour, filters, worker simulation
+## Run it
 
-Team
-Prabha Khiani — Registration No. 24BDS0354
+You need Node.js 18 or newer. No `npm install` is required for the app.
 
-Sam Nagar — Registration No. 24BCE2871
+```bash
+npm start            # http://localhost:8080/lab.html  (real-time server + dashboard)
+npm test             # 9 engine tests
+npm run bench        # load test; writes bench/results.json
+```
 
-Run it
-Keep all files in the same folder.
+Without Node, open the GitHub Pages site or any static server: Job Lab then runs the engine inside the browser tab.
 
-Best experience: open the live GitHub Pages site, or use VS Code with the Live Server extension — the demo state is shared across pages per browser tab.
+To drive a server from the hosted page, run `npm start` and in Job Lab enter `http://localhost:8080` under **Use a server instead**.
+(Safari blocks a secure page from calling a local server; use the local address `http://localhost:8080/lab.html` instead.)
 
-Opening index.html directly by double-click works too, but the shared demo state between pages is only reliable when served over HTTP (GitHub Pages or Live Server).
+## Try this in Job Lab
 
-Navigate with the sidebar — each item opens its own page.
+1. **Booking rush** scenario, then watch backlog rise, the scaler add workers, then remove them.
+2. Submit a job with an idempotency key, then submit the same key again: it runs once.
+3. **Poison jobs** scenario: jobs fail five times and land in the dead-letter queue while good jobs keep flowing. Press **Fix cause and redrive**.
+4. Press **Crash** on a busy worker: its job comes back after the visibility timeout and is finished by another worker.
+5. Lower the maximum workers to 3 and send a burst: the alarms show what an under-sized fleet looks like.
 
-Try Refresh data, Generate event (Overview), the time-range selector (Metrics), search/filters/sorting (Activity logs), and Pause / Simulate failure / Recover (Workers & Queues).
+## Files
 
-Live site: https://prabhakhiani.github.io/QueuePulse/
+| File | Purpose |
+|---|---|
+| `engine.js` | The queue engine. One file, no dependencies, used by browser, server and tests |
+| `lab.html`, `lab.js` | Job Lab page and its logic |
+| `server/server.js` | Node HTTP server: `/api/state`, `/api/jobs`, `/api/burst`, `/api/config`, `/api/workers/:id/{kill,pause,recover}`, `/api/dlq/:queue/redrive`, `/api/speed`, `/api/reset` |
+| `test/engine.test.js` | Automated tests |
+| `bench/loadtest.js` | Deterministic load test |
+| `infra/queuepulse.yaml` | CloudFormation for AWS phase 1 |
+| `aws/worker.js` | Reference SQS/DynamoDB worker |
+| `docs/RESULTS.md` | Measured engine results |
+| `docs/VIVA.md` | Review questions and honest answers |
+| `ARCHITECTURE.md` | Full cloud design and the research behind each choice |
+| `index.html`, `metrics.html`, `activity.html`, `workers.html`, `architecture.html`, `about.html`, `app.js`, `styles.css` | The original dashboard pages |
 
-Technologies
-HTML5, CSS3, vanilla JavaScript (ES6), Canvas 2D API, Web Storage API, GitHub Pages. No frameworks, no build tools, no external libraries.
+## Deploy phase 1 to AWS
 
-Disclaimer
-QueuePulse is a college project created for learning purposes. All metrics, workers, queues and events are simulated locally in the browser. Nothing shown is real-time or connected to a production system.
+```bash
+aws cloudformation deploy --template-file infra/queuepulse.yaml \
+  --stack-name queuepulse-dev --capabilities CAPABILITY_NAMED_IAM \
+  --parameter-overrides Env=dev AlertEmail=you@example.com
+```
+
+The stack creates three queues with dead-letter queues, a DynamoDB table, a private S3 bucket, SNS alerts, CloudWatch alarms and one least-privilege policy per worker.
+It costs very little when idle (on-demand billing). Delete it afterwards with `aws cloudformation delete-stack --stack-name queuepulse-dev`.
+Then run `aws/worker.js` with `QUEUE_URL` and `TABLE` set (see the stack outputs).
+
+## Technologies
+
+HTML, CSS, vanilla JavaScript, Canvas 2D, Node.js (built-in modules only), AWS CloudFormation. No frameworks.
+
+## Disclaimer
+
+College project for learning. The dashboard's older pages show simulated data. Job Lab shows a real engine's behaviour, but the engine is a model of AWS, not AWS.

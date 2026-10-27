@@ -180,3 +180,22 @@ The existing prototype's `refreshState()` call is the mock of this read API.
 - **Phase 1 (MVP, ~1 week):** SQS + one ECS service + DynamoDB + read API; dashboard points at real data. No autoscaling.
 - **Phase 2 (~1 week):** Target-tracking autoscaling, DLQs + alarms, idempotency keys, structured logging.
 - **Phase 3 (optional):** Priority handling (two queues per class), KEDA/EKS variant, multi-AZ hardening, load test with synthetic producers to produce real benchmark numbers for the dashboard.
+
+---
+
+## 9. Implementation status (updated)
+
+Sections 1-8 describe the target design. Since the first review, these parts of it exist as running code:
+
+| Design element | Where it is implemented | How it is checked |
+|---|---|---|
+| Visibility timeout, redelivery after a crash (6) | `engine.js` | test "crashed worker's job reappears"; `docs/RESULTS.md` section 2 |
+| Retries with backoff and jitter, dead-letter after 5 tries (6) | `engine.js` | test "reaches the dead-letter queue after exactly 5 tries" |
+| Idempotent submission and repeat-delivery suppression (6) | `engine.js` | tests "idempotency key" and "duplicate deliveries" |
+| Backlog scaling rule `ceil(B x s / T)` with cooldown (5) | `engine.js` | test on the deck's 600 / 2 s / 60 s = 20 example; `docs/RESULTS.md` section 1 |
+| Alarm rules (7): DLQ not empty, backlog age, failure rate, fleet below minimum | `engine.js` snapshot, shown in Job Lab | visible in Job Lab |
+| Queues, DLQs, DynamoDB, S3, SNS, alarms, least-privilege policies (3, 4, 7) | `infra/queuepulse.yaml` | `cfn-lint` clean; **not yet deployed** |
+| Worker claim, heartbeat, backoff against real SQS and DynamoDB (6) | `aws/worker.js` | **not yet run on AWS** |
+
+Still design only: the Fargate service and its auto-scaling policy, API Gateway and the read API, VPC endpoints, and a load test on real AWS.
+Engine results are model results; see `docs/RESULTS.md` for what they do and do not show.
